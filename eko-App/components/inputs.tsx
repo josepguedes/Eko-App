@@ -1,0 +1,72 @@
+import * as React from "react";
+import { StyleSheet, View, Image, ImageSourcePropType, TextInput } from "react-native";
+
+interface InputsProps {
+    placeHolder: string;
+    icon: ImageSourcePropType;
+    value?: string; // Opcional: para controlar o texto
+    onChangeText?: (text: string) => void; // Opcional: para capturar o que é escrito
+    secureTextEntry?: boolean; // Opcional: para campos de senha
+}
+
+export default function InputCustom({
+    placeHolder,
+    icon,
+    value,
+    onChangeText,
+    secureTextEntry = false
+}: InputsProps) {
+    return (
+        <View style={styles.wrapper}> 
+            <View style={styles.inputContainer}>
+                <View style={styles.leftSection}>
+                    {/* Renderiza o ícone que passares por caminho */}
+                    <Image source={icon} style={styles.iconStyle} />
+                    
+                    {/* TextInput em vez de Text para permitir escrita */}
+                    <TextInput 
+                        style={styles.textInput}
+                        placeholder={placeHolder}
+                        placeholderTextColor="#999"
+                        value={value}
+                        onChangeText={onChangeText}
+                        secureTextEntry={secureTextEntry}
+                    />
+                </View>
+            </View>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    wrapper: {
+        marginVertical: 8,
+    },
+    inputContainer: {
+        width: 258,
+        height: 48, // Altura ligeiramente maior para conforto visual
+        borderStyle: "solid",
+        borderColor: "#d6d6d6",
+        borderWidth: 1,
+        borderRadius: 8, // Arredondar os cantos fica mais moderno
+        paddingHorizontal: 13,
+        justifyContent: "center",
+        backgroundColor: "#fff" // Garante que o fundo não seja transparente
+    },
+    leftSection: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10
+    },
+    iconStyle: {
+        height: 20,
+        width: 20,
+        resizeMode: "contain"
+    },
+    textInput: {
+        flex: 1,
+        fontSize: 16,
+        fontFamily: "DMSans-Regular", // Certifica-te que a fonte está instalada
+        color: "#333", // Cor do texto que o user escreve
+    }
+});
