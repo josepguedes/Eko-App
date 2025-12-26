@@ -49,6 +49,7 @@ export default function BotaoCustom({
 
 const styles = StyleSheet.create({
     botaoBase: {
+        width: 150,
         paddingVertical: 14,
         paddingHorizontal: 20,
         borderRadius: 12,
@@ -57,21 +58,21 @@ const styles = StyleSheet.create({
         marginVertical: 8,
     },
     primario: {
-        backgroundColor: '#007AFF',
+        backgroundColor: '#FFFFFF',
     },
     secundario: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#007AFF',
+        borderColor: '#FFFFFF',
     },
     textoBase: {
         fontSize: 16,
         fontWeight: '600',
     },
     textoPrimario: {
-        color: '#FFFFFF',
+        color: '#000000',
     },
     textoSecundario: {
-        color: '#007AFF',
+        color: '#FFFFFF',
     },
 });
