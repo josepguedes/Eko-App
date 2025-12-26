@@ -1,15 +1,48 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import InputCustom from '@/components/inputs';
 import BotaoCustom from '@/components/buttons';
 import CheckboxProps from '@/components/checkBox';
+import { registerUser, loginUser } from '@/models/users';
 
-export default function Login() {
+export default function Register() {
+    const router = useRouter();
     const [selecionado, setSelecionado] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [user, setUser] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const handleRegister = async () => {
+        console.log('=== INÍCIO DO REGISTO ===');
+        setErrorMessage('');
+
+        try {
+            // Registar o utilizador usando a função do modelo
+            const newUser = await registerUser(user, email, password);
+            console.log('Utilizador registado:', newUser);
+
+            // Fazer login automático do utilizador
+            await loginUser(newUser.id);
+
+            // Se o checkbox estiver ativo, guardar credenciais
+            if (selecionado) {
+                console.log('Credenciais guardadas');
+            }
+
+            console.log('Registo bem-sucedido! A redirecionar...');
+            router.replace('/login');
+        } catch (error) {
+            // Captura todos os erros lançados pelo modelo
+            console.error('Erro:', error);
+            if (error instanceof Error) {
+                setErrorMessage(error.message);
+            } else {
+                setErrorMessage('Erro ao registar. Tente novamente.');
+            }
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -37,6 +70,9 @@ export default function Login() {
                 onChangeText={setPassword}
                 secureTextEntry={true}
             />
+            {errorMessage ? (
+                <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : null}
             <View>
                 <CheckboxProps
                     label="Save Credentials?"
@@ -49,7 +85,7 @@ export default function Login() {
             </Text>
             <BotaoCustom
                 titulo="Register"
-                onPress={() => console.log('Register pressed', { user, email, password })} // Log email and password
+                onPress={handleRegister}
                 variante="primario"
             />
         </View>
@@ -65,6 +101,13 @@ const styles = StyleSheet.create({
     link: {
         color: '#007AFF',
         fontWeight: 'bold',
-        textDecorationLine: 'underline', // Fixed typo here
+        textDecorationLine: 'underline',
+    },
+    errorText: {
+        color: '#ff0000',
+        fontSize: 14,
+        marginTop: 8,
+        textAlign: 'center',
+        width: 258,
     },
 });

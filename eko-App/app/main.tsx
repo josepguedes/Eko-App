@@ -1,15 +1,10 @@
-import { Image } from 'expo-image';
-import {View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-
-
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import BotaoCustom from '@/components/buttons';
-import { getLoggedInUser, logoutUser, User } from '@/models/users';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import React, { useEffect, useState } from 'react'
+import { getLoggedInUser, logoutUser, User } from '@/models/users';
+import BotaoCustom from '@/components/buttons';
+import { useRouter } from 'expo-router';
 
-export default function HomeScreen() {
-
+export default function Main() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,67 +57,27 @@ export default function HomeScreen() {
   }
 
   return (
-    <>
-      <View style={styles.container}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.greeting}>Olá {user.name}!</Text>
-          <Text style={styles.loginInfo}>
-            Está logado com a conta:
-          </Text>
-          <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.userId}>ID do utilizador: {user.id}</Text>
-        </View>
-
-        <BotaoCustom
-          titulo="Terminar Sessão"
-          onPress={handleLogout}
-          variante="secundario"
-          style={styles.logoutButton}
-        />
+    <View style={styles.container}>
+      <View style={styles.infoContainer}>
+        <Text style={styles.greeting}>Olá {user.name}!</Text>
+        <Text style={styles.loginInfo}>
+          Está logado com a conta:
+        </Text>
+        <Text style={styles.email}>{user.email}</Text>
+        <Text style={styles.userId}>ID do utilizador: {user.id}</Text>
       </View>
-      
 
-      
       <BotaoCustom
-        titulo="Login Page"
-        onPress={() => console.log('Botão pressionado!')}
-        variante="primario"
-        navegarPara="login"
+        titulo="Terminar Sessão"
+        onPress={handleLogout}
+        variante="secundario"
+        style={styles.logoutButton}
       />
-      <BotaoCustom
-        titulo="Register Page"
-        onPress={() => console.log('Botão pressionado!')}
-        variante="primario"
-        navegarPara="register"
-      />
-      <BotaoCustom
-        titulo="Main Page"
-        onPress={() => console.log('Botão pressionado!')}
-        variante="primario"
-        navegarPara="main"
-      />
-    </>
-  );
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-
   container: {
     flex: 1,
     justifyContent: 'center',
