@@ -199,3 +199,9 @@ export async function getLoggedInUser(): Promise<User | null> {
     const loggedInUser = users.find(u => u.isLoggedIn);
     return loggedInUser || null;
 }
+
+// Verificar se utilizador etá logado para dar acesso à app
+export async function isUserLoggedIn(): Promise<boolean> {
+    const users = await getAllUsers();
+    return users.some(u => u.isLoggedIn);
+}
