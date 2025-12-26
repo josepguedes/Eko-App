@@ -1,10 +1,14 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { StyleSheet, View, Text, Pressable, Platform, Image } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, Pressable, Platform, Image, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
+import { getLoggedInUser } from '@/models/users';
+
+
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+
   return (
     <View style={styles.bottomNavbar}>
       <BlurView intensity={100} tint="dark" style={styles.blurview}>
@@ -84,6 +88,37 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabLayout() {
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
+
+  const checkAuthentication = async () => {
+    try {
+      const user = await getLoggedInUser();
+      if (!user) {
+        // Nenhum utilizador logado, redirecionar para login
+        router.replace('/login');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar autenticação:', error);
+      router.replace('/login');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  if (isChecking) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
+        <ActivityIndicator size="large" color="#51c284" />
+        <Text style={{ color: '#f5f5f5', marginTop: 10 }}>A verificar autenticação...</Text>
+      </View>
+    );
+  }
+
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
