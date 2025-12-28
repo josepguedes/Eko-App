@@ -68,7 +68,7 @@ export async function initializeDefaultUsers(): Promise<void> {
 
     const defaultUsers = [
         new User(
-            'default_1',
+            '1',
             'maria.silva@email.pt',
             'Maria Silva',
             new Date('2024-01-15'),
@@ -78,7 +78,7 @@ export async function initializeDefaultUsers(): Promise<void> {
             false
         ),
         new User(
-            'default_2',
+            '2',
             'joao.santos@email.pt',
             'João Santos',
             new Date('2024-02-10'),
@@ -88,7 +88,7 @@ export async function initializeDefaultUsers(): Promise<void> {
             false
         ),
         new User(
-            'default_3',
+            '3',
             'ana.costa@email.pt',
             'Ana Costa',
             new Date('2024-03-05'),
@@ -103,7 +103,6 @@ export async function initializeDefaultUsers(): Promise<void> {
     for (const user of defaultUsers) {
         await saveUser(user);
     }
-    console.log('12 utilizadores pré-definidos criados com sucesso!');
 }
 
 export async function saveUser(user: User): Promise<void> {

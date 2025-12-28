@@ -6,10 +6,11 @@ interface GoalCardProps {
   title: string;
   current: number;
   target: number;
+  unit?: string;
   completed?: boolean;
 }
 
-export default function GoalCard({ title, current, target, completed = false }: GoalCardProps) {
+export default function GoalCard({ title, current, target, unit = 'pts', completed = false }: GoalCardProps) {
   const progress = (current / target) * 100;
 
   return (
@@ -32,7 +33,7 @@ export default function GoalCard({ title, current, target, completed = false }: 
             ]} 
           />
         </View>
-        <Text style={styles.progressText}>{current}/{target}pts</Text>
+        <Text style={styles.progressText}>{current}/{target}{unit}</Text>
       </View>
     </View>
   );

@@ -94,15 +94,12 @@ export default function CreateGroup() {
       await addGroupToUser(userId, newGroup.id);
       console.log("Grupo adicionado ao utilizador");
 
-      Alert.alert("Sucesso", "Grupo criado com sucesso!", [
-        {
-          text: "OK",
-          onPress: () => {
-            console.log("A voltar para a página de grupos...");
-            router.push("/(tabs)/groups" as any);
-          },
-        },
-      ]);
+      // Navegar imediatamente de volta
+      console.log("A voltar para a página de grupos...");
+      router.replace('/(tabs)/groups');
+      
+      // Mostrar mensagem de sucesso
+      Alert.alert("Sucesso", "Grupo criado com sucesso!");
     } catch (error) {
       console.error("Erro ao criar grupo:", error);
       if (error instanceof Error) {
@@ -150,13 +147,10 @@ export default function CreateGroup() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Your Group</Text>
+        <Text style={styles.headerTitle}>Create Group</Text>
       </View>
 
       <View style={styles.content}>
@@ -338,8 +332,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#0a0e0d",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 15,
     paddingTop: 50,
     paddingBottom: 20,
@@ -349,8 +343,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "600",
-    color: "#fff",
+    fontWeight: '600',
+    color: '#fff',
   },
   content: {
     flex: 1,
