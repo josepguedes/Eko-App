@@ -314,8 +314,19 @@ export async function deleteGroup(groupId: string, userId: string): Promise<void
 }
 
 
-export async function deleteUserGroup(groupId: string): Promise < void> {
-    const groups = await getAllGroups();
-    const filteredGroups = groups.filter(g => g.id !== groupId);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filteredGroups.map(g => g.toJSON())));
+export async function deleteUserGroup(groupId: string, userId: string): Promise<void> {
+    const group = await getGroupById(groupId);
+    if (!group) {
+        throw new Error('Grupo não encontrado');
+    }
+    if (!group.members.includes(userId)) {
+        console.log(userId);
+        throw new Error('Não faz parte deste grupo');
+    }
+    if (group.createdBy === userId) {
+        throw new Error('O criador não pode sair do grupo');
+    }
+
+    group.members = group.members.filter(id => id !== userId);
+    await saveGroup(group);
 }
