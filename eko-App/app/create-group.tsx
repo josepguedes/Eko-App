@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as ImagePicker from 'expo-image-picker';
 import {
   View,
   Text,
@@ -10,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -113,11 +115,37 @@ export default function CreateGroup() {
     }
   };
 
-  const handleImagePick = () => {
-    Alert.alert(
-      "Info",
-      "Por agora será usada uma imagem padrão. Funcionalidade de escolha de imagem será implementada em breve."
-    );
+  const handleImagePick = async () => {
+    try {
+      // Solicitar permissões
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissão necessária',
+          'É necessário permitir o acesso à galeria de fotos para selecionar uma imagem.'
+        );
+        return;
+      }
+
+      // Abrir o seletor de imagens
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        
+        console.log('Imagem selecionada:', imageUri);
+        setBannerImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar imagem:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a imagem. Tente novamente.');
+    }
   };
 
   const handleMaxUsersConfirm = () => {
@@ -153,20 +181,48 @@ export default function CreateGroup() {
         <Text style={styles.headerTitle}>Create Group</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Banner Image */}
         <View style={styles.formGroup}>
           <Text style={styles.label}>Banner Image</Text>
+          {bannerImage && (
+            <Text style={{ color: '#5ca990', fontSize: 12, marginBottom: 5 }}>
+              ✓ Imagem selecionada
+            </Text>
+          )}
           <TouchableOpacity
             style={styles.bannerContainer}
             onPress={handleImagePick}
           >
-            <View style={styles.bannerPlaceholder}>
-              <View style={styles.addIconContainer}>
-                <Ionicons name="add" size={32} color="#fff" />
+            {bannerImage ? (
+              <View style={styles.bannerPreviewContainer}>
+                <Image 
+                  source={{ uri: bannerImage }} 
+                  style={styles.bannerPreview}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.error('Erro ao carregar imagem:', error);
+                    Alert.alert('Erro', 'Não foi possível carregar a imagem.');
+                    setBannerImage(null);
+                  }}
+                />
+                <View style={styles.bannerOverlay}>
+                  <Ionicons name="images" size={24} color="#fff" />
+                  <Text style={styles.bannerOverlayText}>Tocar para alterar</Text>
+                </View>
               </View>
-              <Text style={styles.bannerText}>Imagem padrão será usada</Text>
-            </View>
+            ) : (
+              <View style={styles.bannerPlaceholder}>
+                <View style={styles.addIconContainer}>
+                  <Ionicons name="add" size={32} color="#fff" />
+                </View>
+                <Text style={styles.bannerText}>Adicionar imagem do banner</Text>
+                <Text style={styles.bannerSubtext}>Recomendado: 16:9</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -234,7 +290,7 @@ export default function CreateGroup() {
             style={styles.createButton}
           />
         </View>
-      </View>
+      </ScrollView>
 
       {/* Max Users Modal */}
       <Modal
@@ -387,7 +443,38 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     color: "#999",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  bannerSubtext: {
+    color: "#666",
     fontSize: 12,
+    marginTop: 4,
+  },
+  bannerPreviewContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  bannerPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bannerOverlayText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
   },
   input: {
     backgroundColor: "transparent",

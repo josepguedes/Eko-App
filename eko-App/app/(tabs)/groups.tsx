@@ -130,7 +130,7 @@ export default function Groups() {
       // Remover o utilizador do grupo
       const updatedMembers = selectedGroup.members.filter(id => id !== userId);
       selectedGroup.members = updatedMembers;
-      await deleteUserGroup(selectedGroup.id);
+      await deleteUserGroup(selectedGroup.id, userId);
       setLeaveModalVisible(false);
       setSelectedGroup(null);
       await loadData();
@@ -225,7 +225,7 @@ export default function Groups() {
                 key={group.id}
                 name={group.name}
                 members={group.members.length}
-                image={require("@/assets/images/partial-react-logo.png")}
+                image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
                 onPress={() => console.log(`Opened ${group.name}`)}
                 onLongPress={() => handleLongPressGroup(group)}
               />
@@ -284,7 +284,7 @@ export default function Groups() {
                   key={group.id}
                   name={group.name}
                   members={group.members.length}
-                  image={require("@/assets/images/partial-react-logo.png")}
+                  image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
                   onJoin={() => handleJoinGroup(group.id)}
                 />
               ))}
@@ -302,7 +302,7 @@ export default function Groups() {
                 key={group.id}
                 name={group.name}
                 members={group.members.length}
-                image={require("@/assets/images/partial-react-logo.png")}
+                image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
                 onPress={() => handleShowJoinModal(group)}
               />
             ))
