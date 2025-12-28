@@ -80,7 +80,7 @@ export async function resetGroups(): Promise<void> {
 // Inicializar grupos pré-definidos com utilizadores distribuídos
 export async function initializeDefaultGroups(): Promise<void> {
     const groups = await getAllGroups();
-    
+
     // Se já existem grupos, não inicializar novamente
     if (groups.length > 0) {
         console.log('Grupos já existem:', groups.length);
@@ -160,7 +160,7 @@ export async function initializeDefaultGroups(): Promise<void> {
 
     // Guardar diretamente no storage
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(defaultGroups.map(g => g.toJSON())));
-    
+
     // Verificar se foram guardados
     const savedGroups = await getAllGroups();
     console.log('6 grupos pré-definidos criados!');
@@ -175,13 +175,13 @@ export async function saveGroup(group: Group): Promise<void> {
     try {
         const groups = await getAllGroups();
         const index = groups.findIndex(g => g.id === group.id);
-        
+
         if (index >= 0) {
             groups[index] = group;
         } else {
             groups.push(group);
         }
-        
+
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(groups.map(g => g.toJSON())));
     } catch (error) {
         throw new Error(`Erro ao guardar grupo: ${error}`);
@@ -264,7 +264,7 @@ export async function joinGroup(groupId: string, userId: string): Promise<void> 
     if (group.members.length >= group.maxUsers) {
         throw new Error('Grupo está cheio');
     }
-    
+
     group.members.push(userId);
     await saveGroup(group);
 }
@@ -280,7 +280,7 @@ export async function leaveGroup(groupId: string, userId: string): Promise<void>
     if (group.createdBy === userId) {
         throw new Error('O criador não pode sair do grupo');
     }
-    
+
     group.members = group.members.filter(id => id !== userId);
     await saveGroup(group);
 }
@@ -292,8 +292,8 @@ export async function getUserGroups(userId: string): Promise<Group[]> {
 
 export async function getSuggestedGroups(userId: string): Promise<Group[]> {
     const groups = await getAllGroups();
-    return groups.filter(g => 
-        g.visibility === 'Public' && 
+    return groups.filter(g =>
+        g.visibility === 'Public' &&
         !g.members.includes(userId) &&
         g.members.length < g.maxUsers
     );
@@ -307,7 +307,14 @@ export async function deleteGroup(groupId: string, userId: string): Promise<void
     if (group.createdBy !== userId && group.createdBy !== 'system') {
         throw new Error('Apenas o criador pode eliminar o grupo');
     }
-    
+
+    const groups = await getAllGroups();
+    const filteredGroups = groups.filter(g => g.id !== groupId);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filteredGroups.map(g => g.toJSON())));
+}
+
+
+export async function deleteUserGroup(groupId: string): Promise < void> {
     const groups = await getAllGroups();
     const filteredGroups = groups.filter(g => g.id !== groupId);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filteredGroups.map(g => g.toJSON())));

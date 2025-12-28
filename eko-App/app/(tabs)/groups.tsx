@@ -5,18 +5,21 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Pressable,
+  Modal
 } from "react-native";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import React, { useState } from "react";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, Redirect } from "expo-router";
 import TabSelector from "@/components/groups/tabs";
 import SuggestedGroupCard from "@/components/groups/suggested-group-card";
 import GroupListCard from "@/components/groups/group-list-card";
 import GoalCard from "@/components/groups/goals-card";
 import BotaoCustom from "@/components/buttons";
 import FloatingAddButton from "@/components/groups/create-group-button";
-import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultGroups } from "@/models/groups";
+import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultGroups, deleteUserGroup } from "@/models/groups";
 import { getLoggedInUser, addGroupToUser, initializeDefaultUsers } from "@/models/users";
-import { getUserGoals, getTaskById, UserGoal } from "@/models/goals";
+import { getUserGoals, getTaskById, UserGoal, deleteUserGoal } from "@/models/goals";
 
 export default function Groups() {
   const router = useRouter();
@@ -25,11 +28,16 @@ export default function Groups() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  
+
   const [suggestedGroups, setSuggestedGroups] = useState<Group[]>([]);
   const [joinedGroups, setJoinedGroups] = useState<Group[]>([]);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [userGoals, setUserGoals] = useState<UserGoal[]>([]);
+
+  const [leaveModalVisible, setLeaveModalVisible] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [deleteGoalModalVisible, setDeleteGoalModalVisible] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<UserGoal | null>(null);
 
   const tabs = [
     { key: "new", label: "New Groups" },
@@ -46,11 +54,11 @@ export default function Groups() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       // Inicializar utilizadores e grupos pré-definidos
       await initializeDefaultUsers();
       await initializeDefaultGroups();
-      
+
       const user = await getLoggedInUser();
       if (!user) {
         router.replace('/login');
@@ -61,7 +69,7 @@ export default function Groups() {
       // Carregar todos os grupos disponíveis
       const availableGroups = await getSuggestedGroups(user.id);
       const userGroups = await getUserGroups(user.id);
-      
+
       // Carregar goals do utilizador
       const goals = await getUserGoals(user.id);
       setUserGoals(goals);
@@ -73,7 +81,7 @@ export default function Groups() {
       setSuggestedGroups(randomSuggested);
       setJoinedGroups(userGroups);
       setAllGroups(availableGroups);
-      
+
       console.log('Data loaded:', {
         suggested: randomSuggested.length,
         joined: userGroups.length,
@@ -108,6 +116,54 @@ export default function Groups() {
     }
   };
 
+  const handleLongPressGroup = (group: Group) => {
+    setSelectedGroup(group);
+    setLeaveModalVisible(true);
+  };
+
+  const confirmLeaveGroup = async () => {
+    if (!userId || !selectedGroup) return;
+
+    try {
+      // Remover o utilizador do grupo
+      const updatedMembers = selectedGroup.members.filter(id => id !== userId);
+      selectedGroup.members = updatedMembers;
+      await deleteUserGroup(selectedGroup.id);
+      setLeaveModalVisible(false);
+      setSelectedGroup(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error leaving group:', error);
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    const goal = userGoals.find(g => g.id === goalId);
+    if (goal) {
+      setSelectedGoal(goal);
+      setDeleteGoalModalVisible(true);
+    }
+  };
+
+  const confirmDeleteGoal = async () => {
+    if (!selectedGoal) return;
+
+    try {
+      await deleteUserGoal(selectedGoal.id);
+      setDeleteGoalModalVisible(false);
+      setSelectedGoal(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    }
+  };
+
   const displayedGroups = showAllGroups
     ? allGroups
     : allGroups.slice(0, 3);
@@ -132,25 +188,26 @@ export default function Groups() {
 
     if (selectedTab === "joined") {
       return (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Groups</Text>
-          {joinedGroups.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>You are not part of any group yet</Text>
-              <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
-            </View>
-          ) : (
-            joinedGroups.map((group) => (
-              <GroupListCard
-                key={group.id}
-                name={group.name}
-                members={group.members.length}
-                image={require("@/assets/images/partial-react-logo.png")}
-                onPress={() => console.log(`Opened ${group.name}`)}
-              />
-            ))
-          )}
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>My Groups</Text>
+        {joinedGroups.length === 0 ? (
+          <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>You are not part of any group yet</Text>
+          <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
+          </View>
+        ) : (
+          joinedGroups.map((group) => (
+            <GroupListCard
+              key={group.id}
+              name={group.name}
+              members={group.members.length}
+              image={require("@/assets/images/partial-react-logo.png")}
+              onPress={() => console.log(`Opened ${group.name}`)}
+              onLongPress={() => handleLongPressGroup(group)}
+            />
+          ))
+        )}
+      </View>
       );
     }
 
@@ -167,7 +224,7 @@ export default function Groups() {
             userGoals.map((goal) => {
               const task = getTaskById(goal.taskId);
               if (!task) return null;
-              
+
               return (
                 <GoalCard
                   key={goal.id}
@@ -176,6 +233,7 @@ export default function Groups() {
                   target={goal.target}
                   unit={task.unit}
                   completed={goal.completed}
+                  onDelete={() => handleDeleteGoal(goal.id)}
                 />
               );
             })
@@ -221,7 +279,7 @@ export default function Groups() {
                 name={group.name}
                 members={group.members.length}
                 image={require("@/assets/images/partial-react-logo.png")}
-                onPress={() => console.log(`Opened ${group.name}`)}
+                onPress={() => handleJoinGroup(group.id)} //Missing redirect to the group page here
               />
             ))
           )}
@@ -241,9 +299,9 @@ export default function Groups() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView 
-        style={styles.content} 
+    <GestureHandlerRootView style={styles.container}>
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -264,7 +322,75 @@ export default function Groups() {
       </ScrollView>
 
       <FloatingAddButton onPress={handleFloatingButtonPress} />
-    </View>
+
+      {/* Modal para sair do grupo */}
+      <Modal
+        visible={leaveModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setLeaveModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setLeaveModalVisible(false)}
+        >
+          <Pressable style={styles.leaveModalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Sair do Grupo</Text>
+            <Text style={styles.modalMessage}>
+              Tem a certeza que deseja sair do grupo "{selectedGroup?.name}"?
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setLeaveModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.leaveButton]}
+                onPress={confirmLeaveGroup}
+              >
+                <Text style={styles.leaveButtonText}>Sair do Grupo</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Modal para eliminar goal */}
+      <Modal
+        visible={deleteGoalModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteGoalModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setDeleteGoalModalVisible(false)}
+        >
+          <Pressable style={styles.leaveModalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Eliminar Goal</Text>
+            <Text style={styles.modalMessage}>
+              Tem a certeza que deseja eliminar o goal{selectedGoal ? ` "${getTaskById(selectedGoal.taskId)?.title}"` : ''}?
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setDeleteGoalModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.leaveButton]}
+                onPress={confirmDeleteGoal}
+              >
+                <Text style={styles.leaveButtonText}>Eliminar</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </GestureHandlerRootView>
   );
 }
 
@@ -320,5 +446,62 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaveModalContent: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    color: '#ccc',
+    fontSize: 16,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  leaveButton: {
+    backgroundColor: '#e53935',
+  },
+  leaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
