@@ -23,7 +23,7 @@ export default function HomeScreen() {
       const loggedUser = await getLoggedInUser();
       setUser(loggedUser);
     } catch (error) {
-      console.error('Erro ao carregar utilizador:', error);
+      console.error('Error loading user:', error);
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export default function HomeScreen() {
         router.replace('/login');
       }
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      console.error('Error logging out:', error);
     }
   };
 
@@ -51,9 +51,9 @@ export default function HomeScreen() {
   if (!user) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Nenhum utilizador logado</Text>
+        <Text style={styles.errorText}>No user logged in</Text>
         <BotaoCustom
-          titulo="Ir para Login"
+          titulo="Go to Login"
           navegarPara="/login"
           variante="primario"
         />
@@ -65,16 +65,16 @@ export default function HomeScreen() {
     <>
       <View style={styles.container}>
         <View style={styles.infoContainer}>
-          <Text style={styles.greeting}>Olá {user.name}!</Text>
+          <Text style={styles.greeting}>Hello {user.name}!</Text>
           <Text style={styles.loginInfo}>
-            Está logado com a conta:
+            You are logged in with:
           </Text>
           <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.userId}>ID do utilizador: {user.id}</Text>
+          <Text style={styles.userId}>User ID: {user.id}</Text>
         </View>
 
         <BotaoCustom
-          titulo="Terminar Sessão"
+          titulo="End Session"
           onPress={handleLogout}
           variante="secundario"
           style={styles.logoutButton}
@@ -101,13 +101,12 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
-
-  container: {
+container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#0a0e0d',
   },
   infoContainer: {
     alignItems: 'center',
@@ -116,26 +115,23 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 32,
     fontWeight: '700',
-    fontFamily: 'DMSans-Bold',
-    color: '#1a1a1a',
+    color: '#fff',
     marginBottom: 20,
   },
   loginInfo: {
     fontSize: 16,
-    fontFamily: 'DMSans-Regular',
-    color: '#666',
+    color: '#999',
     marginBottom: 8,
   },
   email: {
     fontSize: 18,
-    fontFamily: 'DMSans-Bold',
-    color: '#51c284',
+    fontWeight: '700',
+    color: '#5ca990',
     marginBottom: 12,
   },
   userId: {
     fontSize: 14,
-    fontFamily: 'DMSans-Regular',
-    color: '#999',
+    color: '#666',
   },
   logoutButton: {
     width: '100%',

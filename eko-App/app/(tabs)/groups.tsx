@@ -16,14 +16,7 @@ import BotaoCustom from "@/components/buttons";
 import FloatingAddButton from "@/components/groups/create-group-button";
 import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultGroups } from "@/models/groups";
 import { getLoggedInUser, addGroupToUser, initializeDefaultUsers } from "@/models/users";
-
-interface Goal {
-  id: string;
-  title: string;
-  current: number;
-  target: number;
-  completed: boolean;
-}
+import { getUserGoals, getTaskById, UserGoal } from "@/models/goals";
 
 export default function Groups() {
   const router = useRouter();
@@ -36,35 +29,12 @@ export default function Groups() {
   const [suggestedGroups, setSuggestedGroups] = useState<Group[]>([]);
   const [joinedGroups, setJoinedGroups] = useState<Group[]>([]);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
+  const [userGoals, setUserGoals] = useState<UserGoal[]>([]);
 
   const tabs = [
     { key: "new", label: "New Groups" },
     { key: "joined", label: "Joined Groups" },
     { key: "goals", label: "Goals" },
-  ];
-
-  const goalsData: Goal[] = [
-    {
-      id: "g1",
-      title: "Reach 200 pts Eco Drive Score",
-      current: 200,
-      target: 200,
-      completed: true,
-    },
-    {
-      id: "g2",
-      title: "Reach 200 pts Eco Drive Score",
-      current: 30,
-      target: 200,
-      completed: false,
-    },
-    {
-      id: "g3",
-      title: "Reach 200 pts Eco Drive Score",
-      current: 30,
-      target: 200,
-      completed: false,
-    },
   ];
 
   useFocusEffect(
@@ -91,6 +61,10 @@ export default function Groups() {
       // Carregar todos os grupos disponíveis
       const availableGroups = await getSuggestedGroups(user.id);
       const userGroups = await getUserGroups(user.id);
+      
+      // Carregar goals do utilizador
+      const goals = await getUserGoals(user.id);
+      setUserGoals(goals);
 
       // Escolher 3 grupos aleatórios para sugestões
       const shuffled = [...availableGroups].sort(() => 0.5 - Math.random());
@@ -100,13 +74,14 @@ export default function Groups() {
       setJoinedGroups(userGroups);
       setAllGroups(availableGroups);
       
-      console.log('Grupos carregados:', {
+      console.log('Data loaded:', {
         suggested: randomSuggested.length,
         joined: userGroups.length,
-        all: availableGroups.length
+        all: availableGroups.length,
+        goals: goals.length,
       });
     } catch (error) {
-      console.error('Erro ao carregar grupos:', error);
+      console.error('Error loading groups:', error);
     } finally {
       setLoading(false);
     }
@@ -126,7 +101,7 @@ export default function Groups() {
       await addGroupToUser(userId, groupId);
       await loadData();
     } catch (error) {
-      console.error('Erro ao juntar-se ao grupo:', error);
+      console.error('Error joining group:', error);
       if (error instanceof Error) {
         alert(error.message);
       }
@@ -141,7 +116,7 @@ export default function Groups() {
     if (selectedTab === 'new' || selectedTab === 'joined') {
       router.push('/create-group' as any);
     } else if (selectedTab === 'goals') {
-      console.log('Criar goal');
+      router.push('/add-goal' as any);
     }
   };
 
@@ -150,7 +125,7 @@ export default function Groups() {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#5ca990" />
-          <Text style={styles.loadingText}>A carregar grupos...</Text>
+          <Text style={styles.loadingText}>Loading groups...</Text>
         </View>
       );
     }
@@ -161,8 +136,8 @@ export default function Groups() {
           <Text style={styles.sectionTitle}>My Groups</Text>
           {joinedGroups.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Ainda não faz parte de nenhum grupo</Text>
-              <Text style={styles.emptySubtext}>Explore os grupos disponíveis e junte-se a uma comunidade!</Text>
+              <Text style={styles.emptyText}>You are not part of any group yet</Text>
+              <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
             </View>
           ) : (
             joinedGroups.map((group) => (
@@ -183,15 +158,28 @@ export default function Groups() {
       return (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My Goals</Text>
-          {goalsData.map((goal) => (
-            <GoalCard
-              key={goal.id}
-              title={goal.title}
-              current={goal.current}
-              target={goal.target}
-              completed={goal.completed}
-            />
-          ))}
+          {userGoals.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No active goals yet</Text>
+              <Text style={styles.emptySubtext}>Add a new challenge to get started!</Text>
+            </View>
+          ) : (
+            userGoals.map((goal) => {
+              const task = getTaskById(goal.taskId);
+              if (!task) return null;
+              
+              return (
+                <GoalCard
+                  key={goal.id}
+                  title={task.title}
+                  current={goal.current}
+                  target={goal.target}
+                  unit={task.unit}
+                  completed={goal.completed}
+                />
+              );
+            })
+          )}
         </View>
       );
     }
@@ -202,7 +190,7 @@ export default function Groups() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Suggested Groups</Text>
           {suggestedGroups.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhum grupo sugerido disponível</Text>
+            <Text style={styles.emptyText}>No suggested groups available</Text>
           ) : (
             <ScrollView
               horizontal
@@ -225,7 +213,7 @@ export default function Groups() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>All Groups</Text>
           {displayedGroups.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhum grupo disponível</Text>
+            <Text style={styles.emptyText}>No available groups</Text>
           ) : (
             displayedGroups.map((group) => (
               <GroupListCard
@@ -241,7 +229,7 @@ export default function Groups() {
           {!showAllGroups && allGroups.length > 3 && (
             <View style={styles.buttonContainer}>
               <BotaoCustom
-                titulo="Ver Mais"
+                titulo="See More"
                 onPress={() => setShowAllGroups(true)}
                 variante="primario"
               />
