@@ -38,6 +38,8 @@ export default function Groups() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [deleteGoalModalVisible, setDeleteGoalModalVisible] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<UserGoal | null>(null);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [groupToJoin, setGroupToJoin] = useState<Group | null>(null);
 
   const tabs = [
     { key: "new", label: "New Groups" },
@@ -176,6 +178,28 @@ export default function Groups() {
     }
   };
 
+  const handleShowJoinModal = (group: Group) => {
+    setGroupToJoin(group);
+    setJoinModalVisible(true);
+  };
+
+  const confirmJoinGroup = async () => {
+    if (!userId || !groupToJoin) return;
+
+    try {
+      await joinGroup(groupToJoin.id, userId);
+      await addGroupToUser(userId, groupToJoin.id);
+      setJoinModalVisible(false);
+      setGroupToJoin(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error joining group:', error);
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    }
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -188,26 +212,26 @@ export default function Groups() {
 
     if (selectedTab === "joined") {
       return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My Groups</Text>
-        {joinedGroups.length === 0 ? (
-          <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>You are not part of any group yet</Text>
-          <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
-          </View>
-        ) : (
-          joinedGroups.map((group) => (
-            <GroupListCard
-              key={group.id}
-              name={group.name}
-              members={group.members.length}
-              image={require("@/assets/images/partial-react-logo.png")}
-              onPress={() => console.log(`Opened ${group.name}`)}
-              onLongPress={() => handleLongPressGroup(group)}
-            />
-          ))
-        )}
-      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>My Groups</Text>
+          {joinedGroups.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>You are not part of any group yet</Text>
+              <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
+            </View>
+          ) : (
+            joinedGroups.map((group) => (
+              <GroupListCard
+                key={group.id}
+                name={group.name}
+                members={group.members.length}
+                image={require("@/assets/images/partial-react-logo.png")}
+                onPress={() => console.log(`Opened ${group.name}`)}
+                onLongPress={() => handleLongPressGroup(group)}
+              />
+            ))
+          )}
+        </View>
       );
     }
 
@@ -279,7 +303,7 @@ export default function Groups() {
                 name={group.name}
                 members={group.members.length}
                 image={require("@/assets/images/partial-react-logo.png")}
-                onPress={() => handleJoinGroup(group.id)} //Missing redirect to the group page here
+                onPress={() => handleShowJoinModal(group)}
               />
             ))
           )}
@@ -330,7 +354,7 @@ export default function Groups() {
         animationType="fade"
         onRequestClose={() => setLeaveModalVisible(false)}
       >
-        <Pressable 
+        <Pressable
           style={styles.modalOverlay}
           onPress={() => setLeaveModalVisible(false)}
         >
@@ -357,6 +381,40 @@ export default function Groups() {
         </Pressable>
       </Modal>
 
+      {/* Modal para juntar-se a grupo */}
+      <Modal
+        visible={joinModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setJoinModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setJoinModalVisible(false)}
+        >
+          <Pressable style={styles.leaveModalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Juntar-se ao Grupo</Text>
+            <Text style={styles.modalMessage}>
+              Deseja juntar-se ao grupo "{groupToJoin?.name}"?
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setJoinModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.joinButton]}
+                onPress={confirmJoinGroup}
+              >
+                <Text style={styles.joinButtonText}>Juntar-se</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Modal para eliminar goal */}
       <Modal
         visible={deleteGoalModalVisible}
@@ -364,7 +422,7 @@ export default function Groups() {
         animationType="fade"
         onRequestClose={() => setDeleteGoalModalVisible(false)}
       >
-        <Pressable 
+        <Pressable
           style={styles.modalOverlay}
           onPress={() => setDeleteGoalModalVisible(false)}
         >
@@ -500,6 +558,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#e53935',
   },
   leaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  joinButton: {
+    backgroundColor: '#5ca990',
+  },
+  joinButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
