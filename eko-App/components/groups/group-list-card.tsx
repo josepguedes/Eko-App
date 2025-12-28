@@ -7,16 +7,22 @@ interface GroupListCardProps {
   members: number;
   image: ImageSourcePropType;
   onPress?: () => void;
+  onLongPress?: () => void;
 }
 
-export default function GroupListCard({ name, members, image, onPress }: GroupListCardProps) {
+export default function GroupListCard({ name, members, image, onPress, onLongPress }: GroupListCardProps) {
   return (
-    <TouchableOpacity style={styles.groupCard} onPress={onPress}>
+    <TouchableOpacity 
+      style={styles.groupCard} 
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={500}
+    >
       <Image source={image} style={styles.groupImage} />
       <View style={styles.groupInfo}>
         <Text style={styles.groupName}>{name}</Text>
         <View style={styles.membersContainer}>
-          <Ionicons name="people" size={14} color="#fff" />
+          <Ionicons style={styles.membersText} name="people" size={14} color="#fff" />
           <Text style={styles.membersText}>{members} members</Text>
         </View>
       </View>
@@ -59,5 +65,6 @@ const styles = StyleSheet.create({
   membersText: {
     color: '#fff',
     fontSize: 14,
+    marginTop: 16,
   },
 });

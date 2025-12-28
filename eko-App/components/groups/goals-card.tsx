@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 
 interface GoalCardProps {
   title: string;
@@ -8,12 +9,38 @@ interface GoalCardProps {
   target: number;
   unit?: string;
   completed?: boolean;
+  onDelete?: () => void;
 }
 
-export default function GoalCard({ title, current, target, unit = 'pts', completed = false }: GoalCardProps) {
+export default function GoalCard({ title, current, target, unit = 'pts', completed = false, onDelete }: GoalCardProps) {
   const progress = (current / target) * 100;
+  const swipeableRef = useRef<Swipeable>(null);
 
-  return (
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [0, 100],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <Animated.View
+        style={[
+          styles.deleteButton,
+          {
+            transform: [{ translateX: trans }],
+          },
+        ]}
+      >
+        <Ionicons name="trash" size={28} color="#fff" />
+      </Animated.View>
+    );
+  };
+
+  const goalCardContent = (
     <View style={styles.goalCard}>
       <View style={styles.header}>
         <Text style={styles.goalTitle}>{title}</Text>
@@ -37,6 +64,31 @@ export default function GoalCard({ title, current, target, unit = 'pts', complet
       </View>
     </View>
   );
+
+  const handleSwipeOpen = () => {
+    // Fechar o swipeable automaticamente para criar efeito de fisga
+    swipeableRef.current?.close();
+    // Chamar onDelete após um pequeno delay para o efeito visual
+    setTimeout(() => {
+      onDelete?.();
+    }, 200);
+  };
+
+  if (onDelete) {
+    return (
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        onSwipeableOpen={handleSwipeOpen}
+        overshootRight={false}
+        rightThreshold={40}
+      >
+        {goalCardContent}
+      </Swipeable>
+    );
+  }
+
+  return goalCardContent;
 }
 
 const styles = StyleSheet.create({
@@ -82,5 +134,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     minWidth: 80,
+  },
+  deleteButton: {
+    backgroundColor: '#e53935',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+    borderRadius: 16,
+    marginBottom: 12,
   },
 });
