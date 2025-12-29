@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="register" options={{ headerShown: false }} />
         <Stack.Screen name="create-group" options={{ headerShown: false }} />
         <Stack.Screen name="add-goal" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

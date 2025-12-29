@@ -1,22 +1,41 @@
-import { Image } from 'expo-image';
-import {View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+// Profile settings screen matching Figma design with user card, stats, and settings sections
 
-
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import BotaoCustom from '@/components/buttons';
-import { getLoggedInUser, logoutUser, User } from '@/models/users';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react'
 
-export default function HomeScreen() {
+import UserCard from '@/components/profile/user-card';
+import StatsRow from '@/components/profile/stats-row';
+import SettingsItem from '@/components/profile/settings-item';
+import SettingsSection from '@/components/profile/settings-section';
+import { getLoggedInUser, logoutUser, User } from '@/models/users';
+import { useFocusEffect } from '@react-navigation/native';
 
+export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [lightModeEnabled, setLightModeEnabled] = useState(false);
+
+  // Mock stats - will be replaced with real data from user goals
+  const [stats] = useState({
+    score: 210,
+    totalGoals: 27,
+    avgScore: 4.2,
+  });
 
   useEffect(() => {
     loadUser();
   }, []);
+
+  // Reload user data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUser();
+    }, [])
+  );
 
   const loadUser = async () => {
     try {
@@ -40,106 +59,150 @@ export default function HomeScreen() {
     }
   };
 
+  const handleUserCardPress = () => {
+    // Navigate to profile details/edit screen
+    router.push('/edit-profile');
+  };
+
+  const handleConnectCar = () => {
+    console.log('Navigate to connect car');
+  };
+
+  const handleUnits = () => {
+    console.log('Navigate to units settings');
+  };
+
+  const handleTerms = () => {
+    console.log('Navigate to terms & conditions');
+  };
+
+  const handleSupport = () => {
+    console.log('Navigate to support/help');
+  };
+
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#51c284" />
-      </View>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5ca990" />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>No user logged in</Text>
-        <BotaoCustom
-          titulo="Go to Login"
-          navegarPara="/login"
-          variante="primario"
-        />
-      </View>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5ca990" />
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <>
-    <View style={styles.container}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.greeting}>Hello {user.name}!</Text>
-          <Text style={styles.loginInfo}>
-            You are logged in with:
-          </Text>
-          <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.userId}>User ID: {user.id}</Text>
-        </View>
-
-        <BotaoCustom
-          titulo="End Session"
-          onPress={handleLogout}
-          variante="secundario"
-          style={styles.logoutButton}
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* User Profile Card */}
+        <UserCard
+          name={user.name}
+          email={user.email}
+          onPress={handleUserCardPress}
         />
-    </View>
-    </>
+
+        {/* Stats Row */}
+        <StatsRow
+          score={stats.score}
+          totalGoals={stats.totalGoals}
+          avgScore={stats.avgScore}
+        />
+
+        {/* Settings Section 1 */}
+        <SettingsSection>
+          <SettingsItem
+            icon="notifications-outline"
+            label="Notifications"
+            type="toggle"
+            toggleValue={notificationsEnabled}
+            onToggle={setNotificationsEnabled}
+            showDivider
+          />
+          <SettingsItem
+            icon="bluetooth-outline"
+            label="Connect Car"
+            type="navigation"
+            onPress={handleConnectCar}
+            showDivider
+          />
+          <SettingsItem
+            icon="speedometer-outline"
+            label="Units"
+            type="navigation"
+            onPress={handleUnits}
+            showDivider
+          />
+          <SettingsItem
+            icon="document-text-outline"
+            label="Terms & Conditions"
+            type="navigation"
+            onPress={handleTerms}
+            showDivider
+          />
+          <SettingsItem
+            icon="help-circle-outline"
+            label="Support/Help"
+            type="navigation"
+            onPress={handleSupport}
+            showDivider={false}
+          />
+        </SettingsSection>
+
+        {/* Settings Section 2 */}
+        <SettingsSection>
+          <SettingsItem
+            icon="moon-outline"
+            label="Light Mode"
+            type="toggle"
+            toggleValue={lightModeEnabled}
+            onToggle={setLightModeEnabled}
+            showDivider
+          />
+          <SettingsItem
+            icon="log-out-outline"
+            label="Logout"
+            type="action"
+            onPress={handleLogout}
+            showDivider={false}
+          />
+        </SettingsSection>
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
   container: {
+    flex: 1,
+    backgroundColor: '#0a0e0d',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100, // Extra space for bottom tab bar
+  },
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#0a0e0d',
   },
-  infoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  greeting: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 20,
-  },
-  loginInfo: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 8,
-  },
-  email: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#5ca990',
-    marginBottom: 12,
-  },
-  userId: {
-    fontSize: 14,
-    color: '#666',
-  },
-  logoutButton: {
-    width: '100%',
-    maxWidth: 300,
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#ff0000',
-    marginBottom: 20,
+  bottomSpacer: {
+    height: 24,
   },
 });
