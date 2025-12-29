@@ -163,9 +163,9 @@ export async function initializeDefaultGroups(): Promise<void> {
 
     // Verificar se foram guardados
     const savedGroups = await getAllGroups();
-    console.log('6 grupos pré-definidos criados!');
-    console.log('Grupos guardados:', savedGroups.length);
-    console.log('Nomes dos grupos:', savedGroups.map(g => g.name));
+    // console.log('6 grupos pré-definidos criados!');
+    // console.log('Grupos guardados:', savedGroups.length);
+    // console.log('Nomes dos grupos:', savedGroups.map(g => g.name));
 }
 
 export async function saveGroup(group: Group): Promise<void> {
@@ -249,7 +249,7 @@ export async function createGroup(
     );
 
     await saveGroup(newGroup);
-    console.log('Grupo criado:', newGroup);
+    // console.log('Grupo criado:', newGroup);
     return newGroup;
 }
 
@@ -320,7 +320,7 @@ export async function deleteUserGroup(groupId: string, userId: string): Promise<
         throw new Error('Grupo não encontrado');
     }
     if (!group.members.includes(userId)) {
-        console.log(userId);
+        // console.log(userId);
         throw new Error('Não faz parte deste grupo');
     }
     if (group.createdBy === userId) {

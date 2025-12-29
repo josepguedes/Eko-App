@@ -55,12 +55,11 @@ export class User {
 }
 
 const STORAGE_KEY = 'users';
+const SESSION_KEY = 'currentUser';
 
-// Inicializar utilizadores pré-definidos
 export async function initializeDefaultUsers(): Promise<void> {
     const users = await getAllUsers();
     
-    // Verificar se já existem os utilizadores pré-definidos
     const hasDefaultUsers = users.some(u => u.id.startsWith('default_'));
     if (hasDefaultUsers) {
         return;
@@ -99,7 +98,6 @@ export async function initializeDefaultUsers(): Promise<void> {
         )
     ];
 
-    // Guardar todos os utilizadores
     for (const user of defaultUsers) {
         await saveUser(user);
     }
@@ -151,6 +149,11 @@ export async function deleteUser(id: string): Promise<void> {
         const users = await getAllUsers();
         const filteredUsers = users.filter(u => u.id !== id);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filteredUsers.map(u => u.toJSON())));
+        
+        const currentUser = await getLoggedInUser();
+        if (currentUser && currentUser.id === id) {
+            await AsyncStorage.removeItem(SESSION_KEY);
+        }
     } catch (error) {
         throw new Error(`Erro ao eliminar utilizador: ${error}`);
     }
@@ -179,8 +182,10 @@ export async function loginUser(id: string): Promise<void> {
     if (!user) {
         throw new Error('Utilizador não encontrado');
     }
+    
     user.isLoggedIn = true;
     await saveUser(user);
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
 }
 
 export async function logoutUser(id: string): Promise<void> {
@@ -191,8 +196,10 @@ export async function logoutUser(id: string): Promise<void> {
     if (!user) {
         throw new Error('Utilizador não encontrado');
     }
+    
     user.isLoggedIn = false;
     await saveUser(user);
+    await AsyncStorage.removeItem(SESSION_KEY);
 }
 
 export async function registerUser(name: string, email: string, password: string): Promise<User> {
@@ -244,14 +251,19 @@ export async function registerUser(name: string, email: string, password: string
 }
 
 export async function getLoggedInUser(): Promise<User | null> {
-    const users = await getAllUsers();
-    const loggedInUser = users.find(u => u.isLoggedIn);
-    return loggedInUser || null;
+    try {
+        const data = await AsyncStorage.getItem(SESSION_KEY);
+        if (!data) return null;
+        return User.fromJSON(JSON.parse(data));
+    } catch (error) {
+        console.error('Erro ao obter utilizador da sessão:', error);
+        return null;
+    }
 }
 
 export async function isUserLoggedIn(): Promise<boolean> {
-    const users = await getAllUsers();
-    return users.some(u => u.isLoggedIn);
+    const user = await getLoggedInUser();
+    return user !== null && user.isLoggedIn;
 }
 
 export async function addGroupToUser(userId: string, groupId: string): Promise<void> {
@@ -262,6 +274,11 @@ export async function addGroupToUser(userId: string, groupId: string): Promise<v
     if (!user.groups.includes(groupId)) {
         user.groups.push(groupId);
         await saveUser(user);
+        
+        const currentUser = await getLoggedInUser();
+        if (currentUser && currentUser.id === userId) {
+            await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
+        }
     }
 }
 
@@ -271,5 +288,30 @@ export async function removeGroupFromUser(userId: string, groupId: string): Prom
         throw new Error('Utilizador não encontrado');
     }
     user.groups = user.groups.filter(id => id !== groupId);
+    await saveUser(user);
+    
+    const currentUser = await getLoggedInUser();
+    if (currentUser && currentUser.id === userId) {
+        await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
+    }
+}
+
+export async function addGoalToUser(userId: string, goalId: string): Promise<void> {
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error('Utilizador não encontrado');
+    }
+    if (!user.goals.includes(goalId)) {
+        user.goals.push(goalId);
+        await saveUser(user);
+    }
+}
+
+export async function removeGoalFromUser(userId: string, goalId: string): Promise<void> {
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error('Utilizador não encontrado');
+    }
+    user.goals = user.goals.filter(id => id !== goalId);
     await saveUser(user);
 }

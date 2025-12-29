@@ -5,10 +5,11 @@ import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 import { getLoggedInUser } from '@/models/users';
+import { initializeDefaultUsers } from '@/models/users';
 
 
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-
+  initializeDefaultUsers();
   return (
     <View style={styles.bottomNavbar}>
       <BlurView intensity={100} tint="dark" style={styles.blurview}>
@@ -97,6 +98,7 @@ export default function TabLayout() {
 
   const checkAuthentication = async () => {
     try {
+      
       const user = await getLoggedInUser();
       if (!user) {
         // Nenhum utilizador logado, redirecionar para login
@@ -189,7 +191,6 @@ const styles = StyleSheet.create({
   },
   time: {
     fontWeight: '500',
-    fontFamily: 'Inter-Medium',
     textAlign: 'center',
     lineHeight: 24,
     fontSize: 14,
@@ -209,7 +210,6 @@ const styles = StyleSheet.create({
   },
   time3: {
     color: '#f5f5f5',
-    fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 24,
     fontSize: 14,
