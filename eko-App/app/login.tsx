@@ -59,6 +59,13 @@ export default function Login() {
                 // console.log('Credenciais guardadas');
             }
 
+            // Verificar se a password está correta
+            if (user.password !== password) {
+                // console.log('Erro: Password incorreta');
+                setErrorMessage('Password incorreta. Tente novamente.');
+                return;
+            }
+
             // console.log('Login bem-sucedido! A redirecionar...');
             // Redirecionar para a área autenticada
             router.replace('/(tabs)');
