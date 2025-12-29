@@ -4,32 +4,14 @@ export class User {
     id: string;
     email: string;
     name: string;
-<<<<<<< HEAD
-    password: string; // Added password field
-=======
     password: string;
->>>>>>> 148ab81544c038f14b1b4e0707ed9469484911d1
     createdAt: Date;
     cars: string[];
     goals: string[];
     groups: string[];
     isLoggedIn: boolean = false;
 
-<<<<<<< HEAD
-    constructor(
-        id: string, 
-        email: string, 
-        name: string, 
-        password: string, 
-        createdAt: Date = new Date(), 
-        cars: string[] = [], 
-        goals: string[] = [], 
-        groups: string[] = [], 
-        isLoggedIn: boolean = false
-    ) {
-=======
     constructor(id: string, email: string, name: string, password: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false) {
->>>>>>> 148ab81544c038f14b1b4e0707ed9469484911d1
         if (!id || !email || !name || !password) {
             throw new Error('ID, email, nome e password são obrigatórios');
         }
@@ -66,11 +48,7 @@ export class User {
             json.id,
             json.email,
             json.name,
-<<<<<<< HEAD
-            json.password || 'default123', // Fallback for old users without password
-=======
             json.password,
->>>>>>> 148ab81544c038f14b1b4e0707ed9469484911d1
             new Date(json.createdAt),
             json.cars || [],
             json.goals || [],
@@ -201,13 +179,8 @@ export async function deleteUser(id: string): Promise<void> {
     }
 }
 
-<<<<<<< HEAD
 export async function updateUser(userId: string, updates: Partial<Pick<User, 'email' | 'name' | 'password'>>): Promise<void> {
     if (!userId) {
-=======
-export async function updateUser(id: string, updates: Partial<Pick<User, 'email' | 'name' | 'password'>>): Promise<void> {
-    if (!id) {
->>>>>>> 148ab81544c038f14b1b4e0707ed9469484911d1
         throw new Error('ID é obrigatório');
     }
     const user = await getUserById(userId);
@@ -225,13 +198,7 @@ export async function updateUser(id: string, updates: Partial<Pick<User, 'email'
         user.email = updates.email;
     }
     if (updates.name) user.name = updates.name;
-<<<<<<< HEAD
-    if (updates.password) {
-        user.updatePassword(updates.password);
-    }
-=======
     if (updates.password) user.password = updates.password;
->>>>>>> 148ab81544c038f14b1b4e0707ed9469484911d1
     
     await saveUser(user);
     

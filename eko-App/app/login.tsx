@@ -30,9 +30,6 @@ export default function Login() {
                 console.log('Credenciais guardadas');
             }
 
-<<<<<<< HEAD
-            // Redirect to authenticated area
-=======
             // Verificar se a password está correta
             if (user.password !== password) {
                 // console.log('Erro: Password incorreta');
@@ -42,7 +39,6 @@ export default function Login() {
 
             // console.log('Login bem-sucedido! A redirecionar...');
             // Redirecionar para a área autenticada
->>>>>>> 148ab81544c038f14b1b4e0707ed9469484911d1
             router.replace('/(tabs)');
         } catch (error) {
             console.error('Erro ao fazer login:', error);
