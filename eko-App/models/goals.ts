@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { addGoalToUser, removeGoalFromUser } from './users';
 
 export interface PredefinedTask {
   id: string;
@@ -168,6 +169,11 @@ export async function createUserGoal(
   };
 
   await saveUserGoal(newGoal);
+  
+  // ✅ ADICIONAR A GOAL AO USER
+  await addGoalToUser(userId, newId);
+  console.log(`✅ Goal ${newId} adicionada ao user ${userId}`);
+  
   return newGoal;
 }
 
@@ -195,6 +201,14 @@ export async function updateGoalProgress(
 export async function deleteUserGoal(goalId: string): Promise<void> {
   try {
     const goals = await getAllUserGoals();
+    const goal = goals.find(g => g.id === goalId);
+    
+    if (goal) {
+      // ✅ REMOVER A GOAL DO USER ANTES DE DELETAR
+      await removeGoalFromUser(goal.userId, goalId);
+      console.log(`✅ Goal ${goalId} removida do user ${goal.userId}`);
+    }
+    
     const filteredGoals = goals.filter(g => g.id !== goalId);
     await AsyncStorage.setItem(USER_GOALS_KEY, JSON.stringify(filteredGoals));
   } catch (error) {

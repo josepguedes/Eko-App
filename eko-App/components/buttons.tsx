@@ -37,12 +37,12 @@ export default function BotaoCustom({
             ]}
             activeOpacity={0.7}
         >
-            <Text style={[
-                styles.textoBase,
-                variante === 'primario' ? styles.textoPrimario : styles.textoSecundario
-            ]}>
-                {titulo}
-            </Text>
+                <Text style={[
+                    styles.textoBase,
+                    variante === 'primario' ? styles.textoPrimario : styles.textoSecundario
+                ]}>
+                    {titulo}
+                </Text>
         </TouchableOpacity>
     );
 }
