@@ -63,7 +63,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <View style={styles.container}>
+    <View style={styles.container}>
         <View style={styles.infoContainer}>
           <Text style={styles.greeting}>Hello {user.name}!</Text>
           <Text style={styles.loginInfo}>
@@ -79,7 +79,7 @@ export default function HomeScreen() {
           variante="secundario"
           style={styles.logoutButton}
         />
-      </View>
+    </View>
     </>
   );
 }
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
-container: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

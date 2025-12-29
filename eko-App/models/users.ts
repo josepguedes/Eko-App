@@ -4,19 +4,21 @@ export class User {
     id: string;
     email: string;
     name: string;
+    password: string;
     createdAt: Date;
     cars: string[];
     goals: string[];
     groups: string[];
     isLoggedIn: boolean = false;
 
-    constructor(id: string, email: string, name: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false) {
-        if (!id || !email || !name) {
-            throw new Error('ID, email e nome são obrigatórios');
+    constructor(id: string, email: string, name: string, password: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false) {
+        if (!id || !email || !name || !password) {
+            throw new Error('ID, email, nome e password são obrigatórios');
         }
         this.id = id;
         this.email = email;
         this.name = name;
+        this.password = password;
         this.createdAt = createdAt;
         this.cars = cars;
         this.goals = goals;
@@ -29,6 +31,7 @@ export class User {
             id: this.id,
             email: this.email,
             name: this.name,
+            password: this.password,
             createdAt: this.createdAt.toISOString(),
             cars: this.cars,
             goals: this.goals,
@@ -45,6 +48,7 @@ export class User {
             json.id,
             json.email,
             json.name,
+            json.password,
             new Date(json.createdAt),
             json.cars || [],
             json.goals || [],
@@ -70,6 +74,7 @@ export async function initializeDefaultUsers(): Promise<void> {
             '1',
             'maria.silva@email.pt',
             'Maria Silva',
+            'password123',
             new Date('2024-01-15'),
             [],
             [],
@@ -80,6 +85,7 @@ export async function initializeDefaultUsers(): Promise<void> {
             '2',
             'joao.santos@email.pt',
             'João Santos',
+            'password123',
             new Date('2024-02-10'),
             [],
             [],
@@ -90,6 +96,7 @@ export async function initializeDefaultUsers(): Promise<void> {
             '3',
             'ana.costa@email.pt',
             'Ana Costa',
+            'password123',
             new Date('2024-03-05'),
             [],
             [],
@@ -159,7 +166,7 @@ export async function deleteUser(id: string): Promise<void> {
     }
 }
 
-async function updateUser(id: string, updates: Partial<Pick<User, 'email' | 'name'>>): Promise<void> {
+export async function updateUser(id: string, updates: Partial<Pick<User, 'email' | 'name' | 'password'>>): Promise<void> {
     if (!id) {
         throw new Error('ID é obrigatório');
     }
@@ -170,6 +177,7 @@ async function updateUser(id: string, updates: Partial<Pick<User, 'email' | 'nam
     
     if (updates.email) user.email = updates.email;
     if (updates.name) user.name = updates.name;
+    if (updates.password) user.password = updates.password;
     
     await saveUser(user);
 }
@@ -239,6 +247,7 @@ export async function registerUser(name: string, email: string, password: string
         newId.toString(),
         email,
         name,
+        password,
         new Date(),
         [],
         [],
