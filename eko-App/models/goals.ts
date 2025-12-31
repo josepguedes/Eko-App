@@ -130,7 +130,7 @@ export async function saveUserGoal(goal: UserGoal): Promise<void> {
     await AsyncStorage.setItem(USER_GOALS_KEY, JSON.stringify(goals));
   } catch (error) {
     console.error('Error saving goal:', error);
-    throw new Error('Error saving goal');
+    throw new Error('Failed to save goal. Please try again.');
   }
 }
 
@@ -145,14 +145,14 @@ export async function createUserGoal(
   }
 
   if (target < task.minTarget || target > task.maxTarget) {
-    throw new Error(`Value must be between ${task.minTarget} and ${task.maxTarget} ${task.unit}`);
+    throw new Error(`Target must be between ${task.minTarget} and ${task.maxTarget} ${task.unit}`);
   }
 
   // Check if user already has this task active
   const userGoals = await getUserGoals(userId);
   const existingGoal = userGoals.find(g => g.taskId === taskId && !g.completed);
   if (existingGoal) {
-    throw new Error('You already have this goal active');
+    throw new Error('You already have this goal active. Complete or delete it first.');
   }
 
   const goals = await getAllUserGoals();
@@ -213,7 +213,7 @@ export async function deleteUserGoal(goalId: string): Promise<void> {
     await AsyncStorage.setItem(USER_GOALS_KEY, JSON.stringify(filteredGoals));
   } catch (error) {
     console.error('Error deleting goal:', error);
-    throw new Error('Error deleting goal');
+    throw new Error('Failed to delete goal. Please try again.');
   }
 }
 

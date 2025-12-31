@@ -10,19 +10,24 @@ import {
 } from "react-native";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import React, { useState } from "react";
-import { useRouter, useFocusEffect, Redirect } from "expo-router";
+import { useRouter, useFocusEffect, Redirect, useLocalSearchParams } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
 import TabSelector from "@/components/groups/tabs";
 import SuggestedGroupCard from "@/components/groups/suggested-group-card";
 import GroupListCard from "@/components/groups/group-list-card";
-import GoalCard from "@/components/groups/goals-card";
+import GoalCard from "@/components/goals/goals-card";
 import BotaoCustom from "@/components/buttons";
 import FloatingAddButton from "@/components/groups/create-group-button";
-import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultGroups, deleteUserGroup } from "@/models/groups";
+import { useNotification } from "@/contexts/NotificationContext";
+import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultGroups, deleteUserGroup, getGroupById } from "@/models/groups";
 import { getLoggedInUser, addGroupToUser, initializeDefaultUsers } from "@/models/users";
 import { getUserGoals, getTaskById, UserGoal, deleteUserGoal } from "@/models/goals";
+import { getGroupImageSource } from "@/utils/imageHelper";
 
 export default function Groups() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { showNotification } = useNotification();
   const [selectedTab, setSelectedTab] = useState("new");
   const [showAllGroups, setShowAllGroups] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,7 +47,7 @@ export default function Groups() {
   const [groupToJoin, setGroupToJoin] = useState<Group | null>(null);
 
   const tabs = [
-    { key: "new", label: "New Groups" },
+    { key: "new", label: "Explore Groups" },
     { key: "joined", label: "Joined Groups" },
     { key: "goals", label: "Goals" },
   ];
@@ -50,7 +55,11 @@ export default function Groups() {
   useFocusEffect(
     React.useCallback(() => {
       loadData();
-    }, [])
+      // Se vier com parâmetro tab=goals, mudar para a tab de goals
+      if (params.tab === 'goals') {
+        setSelectedTab('goals');
+      }
+    }, [params.tab])
   );
 
   const loadData = async () => {
@@ -110,10 +119,21 @@ export default function Groups() {
       await joinGroup(groupId, userId);
       await addGroupToUser(userId, groupId);
       await loadData();
+      
+      // Show notification and redirect to group page
+      const joinedGroup = await getGroupById(groupId);
+      if (joinedGroup) {
+        showNotification('success', `Successfully joined ${joinedGroup.name}!`);
+        setTimeout(() => {
+          router.push(`/group-page?id=${groupId}` as any);
+        }, 1500);
+      }
     } catch (error) {
       console.error('Error joining group:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        showNotification('critical', error.message);
+      } else {
+        showNotification('critical', 'Failed to join group');
       }
     }
   };
@@ -127,6 +147,7 @@ export default function Groups() {
     if (!userId || !selectedGroup) return;
 
     try {
+      const groupName = selectedGroup.name;
       // Remover o utilizador do grupo
       const updatedMembers = selectedGroup.members.filter(id => id !== userId);
       selectedGroup.members = updatedMembers;
@@ -134,10 +155,13 @@ export default function Groups() {
       setLeaveModalVisible(false);
       setSelectedGroup(null);
       await loadData();
+      showNotification('success', `Successfully left ${groupName}`);
     } catch (error) {
       console.error('Error leaving group:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        showNotification('critical', error.message);
+      } else {
+        showNotification('critical', 'Failed to leave group');
       }
     }
   };
@@ -154,14 +178,18 @@ export default function Groups() {
     if (!selectedGoal) return;
 
     try {
+      const task = getTaskById(selectedGoal.taskId);
       await deleteUserGoal(selectedGoal.id);
       setDeleteGoalModalVisible(false);
       setSelectedGoal(null);
       await loadData();
+      showNotification('success', `Successfully deleted goal: ${task?.title || 'Goal'}`);
     } catch (error) {
       console.error('Error deleting goal:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        showNotification('critical', error.message);
+      } else {
+        showNotification('critical', 'Failed to delete goal');
       }
     }
   };
@@ -187,15 +215,25 @@ export default function Groups() {
     if (!userId || !groupToJoin) return;
 
     try {
+      const groupName = groupToJoin.name;
+      const groupId = groupToJoin.id;
       await joinGroup(groupToJoin.id, userId);
       await addGroupToUser(userId, groupToJoin.id);
       setJoinModalVisible(false);
       setGroupToJoin(null);
       await loadData();
+      
+      // Show notification and redirect to group page
+      showNotification('success', `Successfully joined ${groupName}!`);
+      setTimeout(() => {
+        router.push(`/group-page?id=${groupId}` as any);
+      }, 1500);
     } catch (error) {
       console.error('Error joining group:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        showNotification('critical', error.message);
+      } else {
+        showNotification('critical', 'Failed to join group');
       }
     }
   };
@@ -215,58 +253,115 @@ export default function Groups() {
     }
 
     if (selectedTab === "joined") {
+      const createdGroups = joinedGroups.filter(group => group.createdBy === userId);
+      const memberGroups = joinedGroups.filter(group => group.createdBy !== userId);
+
       return (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Groups</Text>
-          {joinedGroups.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>You are not part of any group yet</Text>
-              <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
-            </View>
-          ) : (
-            joinedGroups.map((group) => (
-              <GroupListCard
-                key={group.id}
-                name={group.name}
-                members={group.members.length}
-                image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
-                onPress={() => handleGroupPress(group.id)}
-                onLongPress={() => handleLongPressGroup(group)}
-              />
-            ))
-          )}
-        </View>
+        <>
+          {/* Groups Created By User */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Groups Created</Text>
+            {createdGroups.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>You haven't created any groups yet</Text>
+                <Text style={styles.emptySubtext}>Create a new group to start your community!</Text>
+              </View>
+            ) : (
+              createdGroups.map((group) => (
+                <GroupListCard
+                  key={group.id}
+                  name={group.name}
+                  members={group.members.length}
+                  image={getGroupImageSource(group.bannerImage)}
+                  onPress={() => handleGroupPress(group.id)}
+                  onLongPress={() => handleLongPressGroup(group)}
+                />
+              ))
+            )}
+          </View>
+
+          {/* Groups User is Member Of */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Groups Joined</Text>
+            {memberGroups.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>You are not part of any group yet</Text>
+                <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
+              </View>
+            ) : (
+              memberGroups.map((group) => (
+                <GroupListCard
+                  key={group.id}
+                  name={group.name}
+                  members={group.members.length}
+                  image={getGroupImageSource(group.bannerImage)}
+                  onPress={() => handleGroupPress(group.id)}
+                  onLongPress={() => handleLongPressGroup(group)}
+                />
+              ))
+            )}
+          </View>
+        </>
       );
     }
 
     if (selectedTab === "goals") {
-      return (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Goals</Text>
-          {userGoals.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No active goals yet</Text>
-              <Text style={styles.emptySubtext}>Add a new challenge to get started!</Text>
-            </View>
-          ) : (
-            userGoals.map((goal) => {
-              const task = getTaskById(goal.taskId);
-              if (!task) return null;
+      const activeGoals = userGoals.filter(goal => !goal.completed);
+      const completedGoals = userGoals.filter(goal => goal.completed);
 
-              return (
-                <GoalCard
-                  key={goal.id}
-                  title={task.title}
-                  current={goal.current}
-                  target={goal.target}
-                  unit={task.unit}
-                  completed={goal.completed}
-                  onDelete={() => handleDeleteGoal(goal.id)}
-                />
-              );
-            })
+      return (
+        <>
+          {/* Active Goals Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Active Goals</Text>
+            {activeGoals.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No active goals yet</Text>
+                <Text style={styles.emptySubtext}>Add a new challenge to get started!</Text>
+              </View>
+            ) : (
+              activeGoals.map((goal) => {
+                const task = getTaskById(goal.taskId);
+                if (!task) return null;
+
+                return (
+                  <GoalCard
+                    key={goal.id}
+                    title={task.title}
+                    current={goal.current}
+                    target={goal.target}
+                    unit={task.unit}
+                    completed={false}
+                    onLongPress={() => handleDeleteGoal(goal.id)}
+                  />
+                );
+              })
+            )}
+          </View>
+
+          {/* Completed Goals Section */}
+          {completedGoals.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Completed Goals</Text>
+              {completedGoals.map((goal) => {
+                const task = getTaskById(goal.taskId);
+                if (!task) return null;
+
+                return (
+                  <GoalCard
+                    key={goal.id}
+                    title={task.title}
+                    current={goal.target}
+                    target={goal.target}
+                    unit={task.unit}
+                    completed={true}
+                    onLongPress={() => handleDeleteGoal(goal.id)}
+                  />
+                );
+              })}
+            </View>
           )}
-        </View>
+        </>
       );
     }
 
@@ -288,7 +383,7 @@ export default function Groups() {
                   key={group.id}
                   name={group.name}
                   members={group.members.length}
-                  image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
+                  image={getGroupImageSource(group.bannerImage)}
                   onJoin={() => handleJoinGroup(group.id)}
                 />
               ))}
@@ -306,7 +401,7 @@ export default function Groups() {
                 key={group.id}
                 name={group.name}
                 members={group.members.length}
-                image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
+                image={getGroupImageSource(group.bannerImage)}
                 onPress={() => handleShowJoinModal(group)}
               />
             ))

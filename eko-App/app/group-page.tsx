@@ -14,13 +14,16 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useNotification } from '@/contexts/NotificationContext';
 import { getGroupById, Group, deleteUserGroup, deleteGroup, saveGroup } from '@/models/groups';
 import { getLoggedInUser, removeGroupFromUser, getAllUsers, User } from '@/models/users';
 import SegmentedControls from '@/components/groups/segmented-controls';
+import { getGroupImageSource } from '@/utils/imageHelper';
 
 export default function GroupDetails() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const { showNotification } = useNotification();
   const groupId = params.id as string;
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -103,15 +106,21 @@ export default function GroupDetails() {
     if (!userId || !group) return;
 
     try {
+      const groupName = group.name;
       await deleteUserGroup(group.id, userId);
       await removeGroupFromUser(userId, group.id);
       setLeaveModalVisible(false);
       setMenuVisible(false);
-      router.back();
+      showNotification('success', `Successfully left ${groupName}`);
+      setTimeout(() => {
+        router.back();
+      }, 1500);
     } catch (error) {
       console.error('Error leaving group:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        showNotification('critical', error.message);
+      } else {
+        showNotification('critical', 'Failed to leave group. Please try again.');
       }
     }
   };
@@ -120,20 +129,34 @@ export default function GroupDetails() {
     if (!userId || !group) return;
 
     try {
+      const groupName = group.name;
       await deleteGroup(group.id, userId);
       setDeleteModalVisible(false);
       setMenuVisible(false);
-      router.back();
+      showNotification('success', `Successfully deleted group "${groupName}"`);
+      setTimeout(() => {
+        router.back();
+      }, 1500);
     } catch (error) {
       console.error('Error deleting group:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        showNotification('critical', error.message);
+      } else {
+        showNotification('critical', 'Failed to delete group. Please try again.');
       }
     }
   };
 
   const handleEditGroupName = async () => {
-    if (!group || !newGroupName.trim()) return;
+    if (!group || !newGroupName.trim()) {
+      showNotification('critical', 'Please enter a group name');
+      return;
+    }
+
+    if (newGroupName.trim().length < 3) {
+      showNotification('critical', 'Group name must have at least 3 characters');
+      return;
+    }
 
     try {
       group.name = newGroupName.trim();
@@ -141,8 +164,10 @@ export default function GroupDetails() {
       await loadGroupData();
       setEditNameModalVisible(false);
       setMenuVisible(false);
+      showNotification('success', `Group name changed to "${newGroupName.trim()}"`);
     } catch (error) {
       console.error('Error updating group name:', error);
+      showNotification('critical', 'Failed to update group name. Please try again.');
     }
   };
 
@@ -150,8 +175,13 @@ export default function GroupDetails() {
     if (!group) return;
     const maxMembers = parseInt(newMaxMembers);
 
-    if (isNaN(maxMembers) || maxMembers < group.members.length) {
-      alert(`O número máximo deve ser pelo menos ${group.members.length} (membros atuais)`);
+    if (isNaN(maxMembers) || maxMembers < 2) {
+      showNotification('critical', 'You must have at least 2 members minimum');
+      return;
+    }
+
+    if (maxMembers < group.members.length) {
+      showNotification('critical', `Maximum number must be at least ${group.members.length} (current members)`);
       return;
     }
 
@@ -161,8 +191,10 @@ export default function GroupDetails() {
       await loadGroupData();
       setEditMaxMembersModalVisible(false);
       setMenuVisible(false);
+      showNotification('success', `Maximum members changed to ${maxMembers}`);
     } catch (error) {
       console.error('Error updating max members:', error);
+      showNotification('critical', 'Failed to update maximum members. Please try again.');
     }
   };
 
@@ -170,14 +202,17 @@ export default function GroupDetails() {
     if (!group) return;
 
     try {
+      const memberName = member.name;
       group.members = group.members.filter(id => id !== member.id);
       await saveGroup(group);
       await removeGroupFromUser(member.id, group.id);
       
       await loadGroupData();
       setMenuVisible(false);
+      showNotification('success', `${memberName} was removed from the group`);
     } catch (error) {
       console.error('Error kicking member:', error);
+      showNotification('critical', 'Failed to remove member. Please try again.');
     }
   };
 
@@ -192,7 +227,7 @@ export default function GroupDetails() {
   if (!group) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Grupo não encontrado</Text>
+        <Text style={styles.errorText}>Group not found</Text>
       </View>
     );
   }
@@ -369,11 +404,7 @@ export default function GroupDetails() {
       {/* Banner with Edit Icon */}
       <View style={styles.bannerContainer}>
         <Image
-          source={
-            group.bannerImage && group.bannerImage !== 'default'
-              ? { uri: group.bannerImage }
-              : require('@/assets/images/partial-react-logo.png')
-          }
+          source={getGroupImageSource(group.bannerImage)}
           style={styles.bannerImage}
         />
         {isCreator && (
@@ -680,7 +711,7 @@ const styles = StyleSheet.create({
   },
   bannerImage: {
     width: '100%',
-    height: 150,
+    height: 200,
     resizeMode: 'cover',
     borderRadius: 16,
     borderWidth: 1,

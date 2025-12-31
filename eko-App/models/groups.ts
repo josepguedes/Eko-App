@@ -6,7 +6,6 @@ export class Group {
     description: string;
     bannerImage: string | null;
     maxUsers: number;
-    visibility: 'Public' | 'Private';
     members: string[];
     createdBy: string;
     createdAt: Date;
@@ -18,19 +17,17 @@ export class Group {
         createdBy: string,
         bannerImage: string | null = null,
         maxUsers: number = 50,
-        visibility: 'Public' | 'Private' = 'Public',
         members: string[] = [],
         createdAt: Date = new Date()
     ) {
         if (!id || !name || !createdBy) {
-            throw new Error('ID, nome e criador são obrigatórios');
+            throw new Error('ID, name and creator are required');
         }
         this.id = id;
         this.name = name;
         this.description = description;
         this.bannerImage = bannerImage;
         this.maxUsers = maxUsers;
-        this.visibility = visibility;
         this.members = members;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
@@ -43,7 +40,6 @@ export class Group {
             description: this.description,
             bannerImage: this.bannerImage,
             maxUsers: this.maxUsers,
-            visibility: this.visibility,
             members: this.members,
             createdBy: this.createdBy,
             createdAt: this.createdAt.toISOString(),
@@ -52,7 +48,7 @@ export class Group {
 
     static fromJSON(json: any): Group {
         if (!json) {
-            throw new Error('JSON inválido');
+            throw new Error('Invalid JSON');
         }
         return new Group(
             json.id,
@@ -61,7 +57,6 @@ export class Group {
             json.createdBy,
             json.bannerImage || null,
             json.maxUsers || 50,
-            json.visibility || 'Public',
             json.members || [],
             new Date(json.createdAt)
         );
@@ -95,9 +90,8 @@ export async function initializeDefaultGroups(): Promise<void> {
             "Eco Warriors Portugal",
             'Comunidade portuguesa dedicada a condução ecológica. Partilha dicas, desafios e conquistas para um futuro mais verde!',
             '1',
-            DEFAULT_BANNER,
+            'group1.jpg',
             50,
-            'Public',
             ['1', '2', '3'],
             new Date('2024-01-01')
         ),
@@ -106,9 +100,8 @@ export async function initializeDefaultGroups(): Promise<void> {
             'Green Road Heroes',
             'Heróis da estrada verde. Conduzimos de forma inteligente, limpa e eficiente. Junta-te a nós na missão de reduzir a pegada de carbono!',
             '2',
-            DEFAULT_BANNER,
+            'group2.jpg',
             40,
-            'Public',
             ['1', '2'],
             new Date('2024-01-15')
         ),
@@ -117,9 +110,8 @@ export async function initializeDefaultGroups(): Promise<void> {
             'Save Money, Save Planet',
             'Poupa dinheiro enquanto salvas o planeta! Aprende técnicas de eco-condução que reduzem consumo de combustível e emissões.',
             '3',
-            DEFAULT_BANNER,
+            'group3.jpg',
             60,
-            'Public',
             ['2', '3'],
             new Date('2024-02-01')
         ),
@@ -128,9 +120,8 @@ export async function initializeDefaultGroups(): Promise<void> {
             'EcoDrive Champions',
             'Os campeões da condução ecológica. Competições amigáveis, rankings e recompensas por hábitos sustentáveis ao volante.',
             '1',
-            DEFAULT_BANNER,
+            'group4.jpg',
             100,
-            'Public',
             ['1', '3'],
             new Date('2024-02-15')
         ),
@@ -139,9 +130,8 @@ export async function initializeDefaultGroups(): Promise<void> {
             'Sustainable Commuters',
             'Grupo para quem faz trajetos diários de forma sustentável. Partilha rotas eficientes e dicas para o dia a dia.',
             '2',
-            DEFAULT_BANNER,
+            'group5.jpg',
             75,
-            'Public',
             ['1', '2', '3'],
             new Date('2024-03-01')
         ),
@@ -150,9 +140,8 @@ export async function initializeDefaultGroups(): Promise<void> {
             'Clean Energy Drivers',
             'Dedicados à energia limpa e transporte sustentável. Discussões sobre veículos elétricos, híbridos e futuro da mobilidade.',
             '3',
-            DEFAULT_BANNER,
+            'group6.jpg',
             50,
-            'Public',
             ['2', '3'],
             new Date('2024-03-15')
         ),
@@ -170,7 +159,7 @@ export async function initializeDefaultGroups(): Promise<void> {
 
 export async function saveGroup(group: Group): Promise<void> {
     if (!group) {
-        throw new Error('Grupo inválido');
+        throw new Error('Invalid group');
     }
     try {
         const groups = await getAllGroups();
@@ -184,7 +173,7 @@ export async function saveGroup(group: Group): Promise<void> {
 
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(groups.map(g => g.toJSON())));
     } catch (error) {
-        throw new Error(`Erro ao guardar grupo: ${error}`);
+        throw new Error(`Failed to save group: ${error}`);
     }
 }
 
@@ -194,13 +183,13 @@ export async function getAllGroups(): Promise<Group[]> {
         if (!data) return [];
         return JSON.parse(data).map((json: any) => Group.fromJSON(json));
     } catch (error) {
-        throw new Error(`Erro ao obter grupos: ${error}`);
+        throw new Error(`Failed to get groups: ${error}`);
     }
 }
 
 export async function getGroupById(id: string): Promise<Group | undefined> {
     if (!id) {
-        throw new Error('ID é obrigatório');
+        throw new Error('ID is required');
     }
     const groups = await getAllGroups();
     return groups.find(g => g.id === id);
@@ -211,20 +200,19 @@ export async function createGroup(
     description: string,
     createdBy: string,
     bannerImage: string | null = null,
-    maxUsers: number = 50,
-    visibility: 'Public' | 'Private' = 'Public'
+    maxUsers: number = 50
 ): Promise<Group> {
     if (!name.trim()) {
-        throw new Error('O nome do grupo é obrigatório');
+        throw new Error('Group name is required');
     }
     if (!description.trim()) {
-        throw new Error('A descrição do grupo é obrigatória');
+        throw new Error('Group description is required');
     }
     if (name.length < 3) {
-        throw new Error('O nome deve ter pelo menos 3 caracteres');
+        throw new Error('Name must have at least 3 characters');
     }
     if (maxUsers < 2) {
-        throw new Error('O grupo deve permitir pelo menos 2 membros');
+        throw new Error('You must have at least 2 members minimum');
     }
 
     const groups = await getAllGroups();
@@ -243,7 +231,6 @@ export async function createGroup(
         createdBy,
         finalBannerImage,
         maxUsers,
-        visibility,
         [createdBy],
         new Date()
     );
@@ -256,13 +243,13 @@ export async function createGroup(
 export async function joinGroup(groupId: string, userId: string): Promise<void> {
     const group = await getGroupById(groupId);
     if (!group) {
-        throw new Error('Grupo não encontrado');
+        throw new Error('Group not found');
     }
     if (group.members.includes(userId)) {
-        throw new Error('Já faz parte deste grupo');
+        throw new Error('You are already a member of this group');
     }
     if (group.members.length >= group.maxUsers) {
-        throw new Error('Grupo está cheio');
+        throw new Error('Group is full');
     }
 
     group.members.push(userId);
@@ -272,13 +259,13 @@ export async function joinGroup(groupId: string, userId: string): Promise<void> 
 export async function leaveGroup(groupId: string, userId: string): Promise<void> {
     const group = await getGroupById(groupId);
     if (!group) {
-        throw new Error('Grupo não encontrado');
+        throw new Error('Group not found');
     }
     if (!group.members.includes(userId)) {
-        throw new Error('Não faz parte deste grupo');
+        throw new Error('You are not a member of this group');
     }
     if (group.createdBy === userId) {
-        throw new Error('O criador não pode sair do grupo');
+        throw new Error('The creator cannot leave the group');
     }
 
     group.members = group.members.filter(id => id !== userId);
@@ -293,7 +280,6 @@ export async function getUserGroups(userId: string): Promise<Group[]> {
 export async function getSuggestedGroups(userId: string): Promise<Group[]> {
     const groups = await getAllGroups();
     return groups.filter(g =>
-        g.visibility === 'Public' &&
         !g.members.includes(userId) &&
         g.members.length < g.maxUsers
     );
@@ -302,10 +288,10 @@ export async function getSuggestedGroups(userId: string): Promise<Group[]> {
 export async function deleteGroup(groupId: string, userId: string): Promise<void> {
     const group = await getGroupById(groupId);
     if (!group) {
-        throw new Error('Grupo não encontrado');
+        throw new Error('Group not found');
     }
     if (group.createdBy !== userId && group.createdBy !== 'system') {
-        throw new Error('Apenas o criador pode eliminar o grupo');
+        throw new Error('Only the creator can delete the group');
     }
 
     const groups = await getAllGroups();
@@ -317,14 +303,14 @@ export async function deleteGroup(groupId: string, userId: string): Promise<void
 export async function deleteUserGroup(groupId: string, userId: string): Promise<void> {
     const group = await getGroupById(groupId);
     if (!group) {
-        throw new Error('Grupo não encontrado');
+        throw new Error('Group not found');
     }
     if (!group.members.includes(userId)) {
         // console.log(userId);
-        throw new Error('Não faz parte deste grupo');
+        throw new Error('You are not a member of this group');
     }
     if (group.createdBy === userId) {
-        throw new Error('O criador não pode sair do grupo');
+        throw new Error('The creator cannot leave the group');
     }
 
     group.members = group.members.filter(id => id !== userId);
