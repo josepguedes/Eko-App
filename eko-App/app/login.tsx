@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import InputCustom from '@/components/inputs';
 import BotaoCustom from '@/components/buttons';
 import CheckboxProps from '@/components/checkBox';
-import { getAllUsers, loginUser } from '@/models/users';
+import { authenticateUser, loginUser } from '@/models/users';
 
 
 export default function Login() {
@@ -15,48 +15,26 @@ export default function Login() {
     const [errorMessage, setErrorMessage] = useState('');
 
     const handleLogin = async () => {
-        // // console.log('=== INÍCIO DO LOGIN ===');
         setErrorMessage('');
 
-        // Validação de campos vazios
-        if (!email.trim() || !password.trim()) {
-            // // console.log('Erro: Campos vazios');
-            setErrorMessage('Por favor, preencha todos os campos');
-            return;
-        }
-
-        // Validação de formato de email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            // // console.log('Erro: Email inválido');
-            setErrorMessage('Por favor, insira um email válido');
-            return;
-        }
-
         try {
-            // Buscar todos os utilizadores
-            // console.log('A buscar utilizadores...');
-            const users = await getAllUsers();
-            // console.log('Número de utilizadores encontrados:', users.length);
-            // console.log('Lista de utilizadores:', users);
+            // Authenticate user with email and password
+            const user = await authenticateUser(email, password);
             
-            // Procurar utilizador com o email fornecido
-            const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-            // console.log('Utilizador encontrado:', user);
-
-            if (!user) {
-                // console.log('Erro: Utilizador não encontrado');
-                setErrorMessage('Utilizador não encontrado. Verifique o email ou registe-se.');
-                return;
-            }
-
-            // Fazer login do utilizador
-            // console.log('A fazer login do utilizador:', user.id);
+            // If authentication successful, log the user in
             await loginUser(user.id);
 
-            // Se o checkbox estiver ativo, guardar credenciais
+            // If the checkbox is active, save credentials
             if (selecionado) {
-                // console.log('Credenciais guardadas');
+                // TODO: Implement credential saving if needed
+                console.log('Credenciais guardadas');
+            }
+
+            // Verificar se a password está correta
+            if (user.password !== password) {
+                // console.log('Erro: Password incorreta');
+                setErrorMessage('Password incorreta. Tente novamente.');
+                return;
             }
 
             // console.log('Login bem-sucedido! A redirecionar...');

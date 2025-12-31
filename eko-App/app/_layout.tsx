@@ -24,6 +24,7 @@ export default function RootLayout() {
         <Stack.Screen name="group-details" options={{ headerShown: false }} />
         <Stack.Screen name="group-page" options={{ headerShown: false }} />
         <Stack.Screen name="create-goals" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
