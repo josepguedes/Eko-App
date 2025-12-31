@@ -195,7 +195,7 @@ export default function MyGoals({
 
 const styles = StyleSheet.create({
   container: {
-    width: 328,
+    width: 368,
     backgroundColor: "transparent",
   },
   card: {
