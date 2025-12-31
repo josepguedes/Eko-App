@@ -16,22 +16,22 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import BotaoCustom from "@/components/buttons";
+import { useNotification } from "@/contexts/NotificationContext";
 import { createGroup } from "@/models/groups";
 import { getLoggedInUser, addGroupToUser } from "@/models/users";
 
 export default function CreateGroup() {
   const router = useRouter();
+  const { showNotification } = useNotification();
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [maxUsers, setMaxUsers] = useState(50);
-  const [visibility, setVisibility] = useState<"Public" | "Private">("Public");
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Modals
   const [showMaxUsersModal, setShowMaxUsersModal] = useState(false);
-  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
   const [tempMaxUsers, setTempMaxUsers] = useState("50");
 
   useEffect(() => {
@@ -43,14 +43,14 @@ export default function CreateGroup() {
       const user = await getLoggedInUser();
       console.log("User carregado:", user);
       if (!user) {
-        Alert.alert("Erro", "Deve estar logado para criar um grupo");
+        Alert.alert("Error", "You must be logged in to create a group");
         router.back();
         return;
       }
       setUserId(user.id);
     } catch (error) {
       console.error("Erro ao carregar utilizador:", error);
-      Alert.alert("Erro", "Erro ao carregar dados do utilizador");
+      Alert.alert("Error", "Failed to load user data");
       router.back();
     }
   };
@@ -61,21 +61,30 @@ export default function CreateGroup() {
     console.log("groupName:", groupName);
     console.log("description:", description);
     console.log("maxUsers:", maxUsers);
-    console.log("visibility:", visibility);
     console.log("bannerImage:", bannerImage);
 
     if (!userId) {
-      Alert.alert("Erro", "Utilizador não identificado");
+      Alert.alert("Error", "User not identified");
       return;
     }
 
     if (!groupName.trim()) {
-      Alert.alert("Erro", "Por favor, insira o nome do grupo");
+      Alert.alert("Error", "Please enter the group name");
+      return;
+    }
+
+    if (groupName.trim().length < 3) {
+      Alert.alert("Error", "Group name must have at least 3 characters");
       return;
     }
 
     if (!description.trim()) {
-      Alert.alert("Erro", "Por favor, insira uma descrição");
+      Alert.alert("Error", "Please enter a description");
+      return;
+    }
+
+    if (maxUsers < 2) {
+      Alert.alert("Error", "You must have at least 2 members minimum");
       return;
     }
 
@@ -87,8 +96,7 @@ export default function CreateGroup() {
         description,
         userId,
         bannerImage,
-        maxUsers,
-        visibility
+        maxUsers
       );
       console.log("Grupo criado:", newGroup);
 
@@ -96,19 +104,21 @@ export default function CreateGroup() {
       await addGroupToUser(userId, newGroup.id);
       console.log("Grupo adicionado ao utilizador");
 
-      // Navegar imediatamente de volta
-      console.log("A voltar para a página de grupos...");
-      router.replace('/(tabs)/groups');
+      // Show success notification
+      showNotification('success', `Group "${newGroup.name}" created successfully!`);
       
-      // Mostrar mensagem de sucesso
-      Alert.alert("Sucesso", "Grupo criado com sucesso!");
+      // Navegar para a página do grupo criado após a notificação
+      console.log("A ir para a página do grupo...");
+      setTimeout(() => {
+        router.replace(`/group-page?id=${newGroup.id}`);
+      }, 1500);
     } catch (error) {
       console.error("Erro ao criar grupo:", error);
       if (error instanceof Error) {
         console.error("Mensagem de erro:", error.message);
-        Alert.alert("Erro", error.message);
+        Alert.alert("Error", error.message);
       } else {
-        Alert.alert("Erro", "Erro ao criar grupo. Tente novamente.");
+        Alert.alert("Error", "Failed to create group. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -122,8 +132,8 @@ export default function CreateGroup() {
       
       if (status !== 'granted') {
         Alert.alert(
-          'Permissão necessária',
-          'É necessário permitir o acesso à galeria de fotos para selecionar uma imagem.'
+          'Permission Required',
+          'Please allow access to the photo gallery to select an image.'
         );
         return;
       }
@@ -152,18 +162,22 @@ export default function CreateGroup() {
       }
     } catch (error) {
       console.error('Erro ao selecionar imagem:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar a imagem. Tente novamente.');
+      Alert.alert('Error', 'Could not select the image. Please try again.');
     }
   };
 
   const handleMaxUsersConfirm = () => {
     const num = parseInt(tempMaxUsers);
-    if (num >= 2) {
-      setMaxUsers(num);
-      setShowMaxUsersModal(false);
-    } else {
-      Alert.alert("Erro", "O número mínimo de membros é 2");
+    if (isNaN(num) || num < 2) {
+      Alert.alert("Error", "You must have at least 2 members minimum");
+      return;
     }
+    if (num > 1000) {
+      Alert.alert("Error", "Maximum number of members cannot exceed 1000");
+      return;
+    }
+    setMaxUsers(num);
+    setShowMaxUsersModal(false);
   };
 
   if (!userId) {
@@ -261,32 +275,19 @@ export default function CreateGroup() {
           />
         </View>
 
-        {/* Max Users & Visibility */}
-        <View style={styles.row}>
-          <View style={styles.halfFormGroup}>
-            <Text style={styles.label}>Max Users</Text>
-            <TouchableOpacity
-              style={styles.selector}
-              onPress={() => {
-                setTempMaxUsers(maxUsers.toString());
-                setShowMaxUsersModal(true);
-              }}
-            >
-              <Text style={styles.selectorText}>{maxUsers} users</Text>
-              <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.halfFormGroup}>
-            <Text style={styles.label}>Group Visibility</Text>
-            <TouchableOpacity
-              style={styles.selector}
-              onPress={() => setShowVisibilityModal(true)}
-            >
-              <Text style={styles.selectorText}>{visibility}</Text>
-              <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+        {/* Max Users */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Max Users</Text>
+          <TouchableOpacity
+            style={styles.selector}
+            onPress={() => {
+              setTempMaxUsers(maxUsers.toString());
+              setShowMaxUsersModal(true);
+            }}
+          >
+            <Text style={styles.selectorText}>{maxUsers} users</Text>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         {/* Create Button */}
@@ -311,12 +312,12 @@ export default function CreateGroup() {
           style={styles.modalOverlay}
           onPress={() => setShowMaxUsersModal(false)}
         >
-          <View
+          <Pressable
             style={styles.modalContent}
-            onStartShouldSetResponder={() => true}
+            onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>Número máximo de membros</Text>
-            <Text style={styles.modalSubtitle}>Mínimo 2 membros</Text>
+            <Text style={styles.modalTitle}>Maximum Number of Members</Text>
+            <Text style={styles.modalSubtitle}>Minimum 2 members</Text>
             <TextInput
               style={styles.modalInput}
               value={tempMaxUsers}
@@ -330,7 +331,7 @@ export default function CreateGroup() {
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => setShowMaxUsersModal(false)}
               >
-                <Text style={styles.modalButtonText}>Cancelar</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
@@ -339,51 +340,7 @@ export default function CreateGroup() {
                 <Text style={styles.modalButtonText}>OK</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Visibility Modal */}
-      <Modal
-        visible={showVisibilityModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowVisibilityModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowVisibilityModal(false)}
-        >
-          <View
-            style={styles.modalContent}
-            onStartShouldSetResponder={() => true}
-          >
-            <Text style={styles.modalTitle}>Visibilidade do Grupo</Text>
-            <TouchableOpacity
-              style={styles.visibilityOption}
-              onPress={() => {
-                setVisibility("Public");
-                setShowVisibilityModal(false);
-              }}
-            >
-              <Text style={styles.visibilityText}>Público</Text>
-              {visibility === "Public" && (
-                <Ionicons name="checkmark" size={24} color="#5ca990" />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.visibilityOption}
-              onPress={() => {
-                setVisibility("Private");
-                setShowVisibilityModal(false);
-              }}
-            >
-              <Text style={styles.visibilityText}>Privado</Text>
-              {visibility === "Private" && (
-                <Ionicons name="checkmark" size={24} color="#5ca990" />
-              )}
-            </TouchableOpacity>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -590,18 +547,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
-  },
-  visibilityOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#333",
-  },
-  visibilityText: {
-    color: "#fff",
-    fontSize: 16,
   },
 });

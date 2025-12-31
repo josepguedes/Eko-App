@@ -12,15 +12,18 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BotaoCustom from '@/components/buttons';
+import { useNotification } from '@/contexts/NotificationContext';
 import { PREDEFINED_TASKS, PredefinedTask, createUserGoal } from '@/models/goals';
 import { getLoggedInUser } from '@/models/users';
 
 export default function AddGoal() {
   const router = useRouter();
+  const { showNotification } = useNotification();
   const [selectedTask, setSelectedTask] = useState<PredefinedTask | null>(null);
   const [targetValue, setTargetValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadUser();
@@ -44,17 +47,30 @@ export default function AddGoal() {
   const handleTaskSelect = (task: PredefinedTask) => {
     setSelectedTask(task);
     setTargetValue(task.defaultTarget.toString());
+    setErrorMessage(null); // Limpar erro ao selecionar nova tarefa
   };
 
   const handleCreateGoal = async () => {
+    setErrorMessage(null); // Limpar mensagem de erro anterior
+
     if (!userId || !selectedTask) {
-      Alert.alert('Error', 'Please select a task');
+      setErrorMessage('Please select a task');
       return;
     }
 
     const target = parseInt(targetValue);
     if (isNaN(target)) {
-      Alert.alert('Error', 'Please enter a valid value');
+      setErrorMessage('Please enter a valid number');
+      return;
+    }
+
+    if (target < selectedTask.minTarget) {
+      setErrorMessage(`Minimum target is ${selectedTask.minTarget} ${selectedTask.unit}`);
+      return;
+    }
+
+    if (target > selectedTask.maxTarget) {
+      setErrorMessage(`Maximum target is ${selectedTask.maxTarget} ${selectedTask.unit}`);
       return;
     }
 
@@ -62,17 +78,19 @@ export default function AddGoal() {
     try {
       await createUserGoal(userId, selectedTask.id, target);
       
-      // Navegar imediatamente de volta
-      router.replace('/(tabs)/groups');
+      // Show success notification
+      showNotification('success', `Goal "${selectedTask.title}" created successfully!`);
       
-      // Mostrar mensagem de sucesso
-      Alert.alert('Success', 'Goal created successfully!');
+      // Navegar para a tab de goals após a notificação
+      setTimeout(() => {
+        router.replace('/(tabs)/groups?tab=goals');
+      }, 1500);
     } catch (error) {
       console.error('Error creating goal:', error);
       if (error instanceof Error) {
-        Alert.alert('Error', error.message);
+        setErrorMessage(error.message);
       } else {
-        Alert.alert('Error', 'Error creating goal');
+        setErrorMessage('Failed to create goal. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -158,6 +176,14 @@ export default function AddGoal() {
             )}
           </TouchableOpacity>
         ))}
+
+        {/* Error Message */}
+        {errorMessage && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="warning" size={20} color="#e53935" />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
 
         {/* Create Button */}
         {selectedTask && (
@@ -284,6 +310,23 @@ const styles = StyleSheet.create({
   rangeText: {
     fontSize: 12,
     color: '#666',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    borderWidth: 1,
+    borderColor: '#e53935',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    color: '#e53935',
+    fontSize: 14,
+    fontWeight: '500',
   },
   buttonContainer: {
     alignItems: 'center',
