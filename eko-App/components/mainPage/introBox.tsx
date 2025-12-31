@@ -28,7 +28,7 @@ export default function IntroBox() {
 
 const styles = StyleSheet.create({
     container: {
-        width: 327,
+        width: 357,
         height: 139,
         borderRadius: 16,
         overflow: 'hidden',
