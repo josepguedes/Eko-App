@@ -200,6 +200,10 @@ export default function Groups() {
     }
   };
 
+  const handleGroupPress = (groupId: string) => {
+    router.push(`/group-page?id=${groupId}` as any);
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -226,7 +230,7 @@ export default function Groups() {
                 name={group.name}
                 members={group.members.length}
                 image={group.bannerImage && group.bannerImage !== 'default' ? { uri: group.bannerImage } : require("@/assets/images/partial-react-logo.png")}
-                // onPress={() => console.log(`Opened ${group.name}`)}
+                onPress={() => handleGroupPress(group.id)}
                 onLongPress={() => handleLongPressGroup(group)}
               />
             ))

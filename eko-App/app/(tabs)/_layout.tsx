@@ -132,6 +132,9 @@ export default function TabLayout() {
       <Tabs.Screen name="record" />
       <Tabs.Screen name="stats" />
       <Tabs.Screen name="profile" />
+      <Tabs.Screen name="create-goals" />
+      <Tabs.Screen name="create-group" />
+      <Tabs.Screen name="group-page" />
     </Tabs>
   );
 }

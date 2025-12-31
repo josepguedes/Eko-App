@@ -134,12 +134,20 @@ export default function CreateGroup() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
+        base64: true, // Obter base64 da imagem
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        // Converter para base64 data URI para persistir após refresh
+        const asset = result.assets[0];
+        let imageUri = asset.uri;
         
-        console.log('Imagem selecionada:', imageUri);
+        // Se temos base64, usar esse formato (melhor para web)
+        if (asset.base64) {
+          imageUri = `data:image/jpeg;base64,${asset.base64}`;
+        }
+        
+        console.log('Imagem selecionada:', imageUri.substring(0, 50) + '...');
         setBannerImage(imageUri);
       }
     } catch (error) {
@@ -391,7 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
   },
   backButton: {
