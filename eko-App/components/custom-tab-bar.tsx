@@ -3,7 +3,12 @@ import { StyleSheet, View, Text, Pressable, Platform, Image } from 'react-native
 import { BlurView } from 'expo-blur';
 import { useRouter, usePathname } from 'expo-router';
 
-export default function CustomTabBar() {
+interface CustomTabBarProps {
+  activeTab?: string;
+  onTabPress?: (tab: string) => void;
+}
+
+export default function CustomTabBar({ activeTab, onTabPress }: CustomTabBarProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -24,10 +29,14 @@ export default function CustomTabBar() {
         <View style={[styles.bottomNavbar2, styles.view2FlexBox]}>
           <View style={styles.frameParent}>
             {routes.map((route) => {
-              const isFocused = pathname === route.path || pathname.startsWith(`/${route.name}`);
+              const isFocused = activeTab ? activeTab === route.name : (pathname === route.path || pathname.startsWith(`/${route.name}`));
 
               const onPress = () => {
-                router.push(route.path as any);
+                if (onTabPress) {
+                  onTabPress(route.name);
+                } else {
+                  router.push(route.path as any);
+                }
               };
 
               return (

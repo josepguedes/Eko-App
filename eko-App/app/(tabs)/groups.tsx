@@ -6,10 +6,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
-  Modal
+  Modal,
+  TextInput,
 } from "react-native";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRouter, useFocusEffect, Redirect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import TabSelector from "@/components/groups/tabs";
@@ -23,6 +24,8 @@ import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultG
 import { getLoggedInUser, addGroupToUser, initializeDefaultUsers } from "@/models/users";
 import { getUserGoals, getTaskById, UserGoal, deleteUserGoal } from "@/models/goals";
 import { getGroupImageSource } from "@/utils/imageHelper";
+import { getUserGroupGoals, GroupGoal, getGroupTaskById } from "@/models/groupGoals";
+import GroupGoalCard from "@/components/groups/group-goal-card";
 
 export default function Groups() {
   const router = useRouter();
@@ -38,6 +41,8 @@ export default function Groups() {
   const [joinedGroups, setJoinedGroups] = useState<Group[]>([]);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [userGoals, setUserGoals] = useState<UserGoal[]>([]);
+  const [groupGoals, setGroupGoals] = useState<GroupGoal[]>([]);
+  const [goalsSubTab, setGoalsSubTab] = useState<'my' | 'group'>('my');
 
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -45,6 +50,13 @@ export default function Groups() {
   const [selectedGoal, setSelectedGoal] = useState<UserGoal | null>(null);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [groupToJoin, setGroupToJoin] = useState<Group | null>(null);
+  
+  // Pesquisa
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Seleção múltipla
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const tabs = [
     { key: "new", label: "Explore Groups" },
@@ -84,6 +96,11 @@ export default function Groups() {
       // Carregar goals do utilizador
       const goals = await getUserGoals(user.id);
       setUserGoals(goals);
+      
+      // Carregar group goals dos grupos que o utilizador participa
+      const userGroupIds = userGroups.map(g => g.id);
+      const gGoals = await getUserGroupGoals(userGroupIds);
+      setGroupGoals(gGoals);
 
       // Escolher 3 grupos aleatórios para sugestões
       const shuffled = [...availableGroups].sort(() => 0.5 - Math.random());
@@ -123,7 +140,7 @@ export default function Groups() {
       // Show notification and redirect to group page
       const joinedGroup = await getGroupById(groupId);
       if (joinedGroup) {
-        showNotification('success', `Successfully joined ${joinedGroup.name}!`);
+        showNotification('success', `🎉 Successfully joined ${joinedGroup.name}!`);
         setTimeout(() => {
           router.push(`/group-page?id=${groupId}` as any);
         }, 1500);
@@ -155,7 +172,7 @@ export default function Groups() {
       setLeaveModalVisible(false);
       setSelectedGroup(null);
       await loadData();
-      showNotification('success', `Successfully left ${groupName}`);
+      showNotification('success', `👋 Successfully left ${groupName}`);
     } catch (error) {
       console.error('Error leaving group:', error);
       if (error instanceof Error) {
@@ -183,7 +200,7 @@ export default function Groups() {
       setDeleteGoalModalVisible(false);
       setSelectedGoal(null);
       await loadData();
-      showNotification('success', `Successfully deleted goal: ${task?.title || 'Goal'}`);
+      showNotification('success', `🗑️ Successfully deleted goal: ${task?.title || 'Goal'}`);
     } catch (error) {
       console.error('Error deleting goal:', error);
       if (error instanceof Error) {
@@ -205,6 +222,75 @@ export default function Groups() {
       router.push('/add-goal' as any);
     }
   };
+  
+  // Função para toggle de seleção múltipla
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedItems(new Set());
+  };
+  
+  // Função para selecionar/desselecionar item
+  const toggleItemSelection = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+  
+  // Função para deletar itens selecionados
+  const deleteSelectedItems = async () => {
+    if (!userId) return;
+    
+    try {
+      if (selectedTab === 'joined') {
+        // Deletar grupos selecionados
+        for (const groupId of selectedItems) {
+          await deleteUserGroup(groupId, userId);
+        }
+        showNotification('success', `Successfully left ${selectedItems.size} group(s)`);
+      } else if (selectedTab === 'goals') {
+        // Deletar goals selecionados
+        for (const goalId of selectedItems) {
+          await deleteUserGoal(goalId);
+        }
+        showNotification('success', `Successfully deleted ${selectedItems.size} goal(s)`);
+      }
+      
+      setSelectionMode(false);
+      setSelectedItems(new Set());
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting selected items:', error);
+      showNotification('critical', 'Failed to delete some items');
+    }
+  };
+  
+  // Filtrar grupos com base na pesquisa (memoized)
+  const filterGroups = useCallback((groups: Group[]) => {
+    if (!searchQuery.trim()) return groups;
+    const query = searchQuery.toLowerCase();
+    return groups.filter(group => 
+      group.name.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+  
+  // Grupos filtrados memoizados
+  const filteredSuggestedGroups = useMemo(() => filterGroups(suggestedGroups), [suggestedGroups, filterGroups]);
+  const filteredJoinedGroups = useMemo(() => filterGroups(joinedGroups), [joinedGroups, filterGroups]);
+  const filteredAllGroups = useMemo(() => filterGroups(allGroups), [allGroups, filterGroups]);
+  
+  // Goals filtrados e categorizados (memoized)
+  const categorizedGoals = useMemo(() => {
+    return {
+      activeGoals: userGoals.filter(goal => !goal.completed),
+      completedGoals: userGoals.filter(goal => goal.completed),
+      activeGroupGoals: groupGoals.filter(g => !g.completed),
+      completedGroupGoals: groupGoals.filter(g => g.completed),
+    };
+  }, [userGoals, groupGoals]);
 
   const handleShowJoinModal = (group: Group) => {
     setGroupToJoin(group);
@@ -224,7 +310,7 @@ export default function Groups() {
       await loadData();
       
       // Show notification and redirect to group page
-      showNotification('success', `Successfully joined ${groupName}!`);
+      showNotification('success', `🎉 Successfully joined ${groupName}!`);
       setTimeout(() => {
         router.push(`/group-page?id=${groupId}` as any);
       }, 1500);
@@ -253,18 +339,39 @@ export default function Groups() {
     }
 
     if (selectedTab === "joined") {
-      const createdGroups = joinedGroups.filter(group => group.createdBy === userId);
-      const memberGroups = joinedGroups.filter(group => group.createdBy !== userId);
+      const createdGroups = filteredJoinedGroups.filter(group => group.createdBy === userId);
+      const memberGroups = filteredJoinedGroups.filter(group => group.createdBy !== userId);
 
       return (
         <>
+          {/* Barra de pesquisa */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search groups..."
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#999" />
+              </Pressable>
+            )}
+          </View>
+          
           {/* Groups Created By User */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Groups Created</Text>
             {createdGroups.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>You haven't created any groups yet</Text>
-                <Text style={styles.emptySubtext}>Create a new group to start your community!</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No groups found' : "You haven't created any groups yet"}
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  {searchQuery ? 'Try a different search' : 'Create a new group to start your community!'}
+                </Text>
               </View>
             ) : (
               createdGroups.map((group) => (
@@ -285,8 +392,12 @@ export default function Groups() {
             <Text style={styles.sectionTitle}>Groups Joined</Text>
             {memberGroups.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>You are not part of any group yet</Text>
-                <Text style={styles.emptySubtext}>Explore available groups and join a community!</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No groups found' : 'You are not part of any group yet'}
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  {searchQuery ? 'Try a different search' : 'Explore available groups and join a community!'}
+                </Text>
               </View>
             ) : (
               memberGroups.map((group) => (
@@ -306,68 +417,237 @@ export default function Groups() {
     }
 
     if (selectedTab === "goals") {
-      const activeGoals = userGoals.filter(goal => !goal.completed);
-      const completedGoals = userGoals.filter(goal => goal.completed);
+      const { activeGoals, completedGoals, activeGroupGoals, completedGroupGoals } = categorizedGoals;
 
       return (
         <>
-          {/* Active Goals Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Active Goals</Text>
-            {activeGoals.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No active goals yet</Text>
-                <Text style={styles.emptySubtext}>Add a new challenge to get started!</Text>
-              </View>
-            ) : (
-              activeGoals.map((goal) => {
-                const task = getTaskById(goal.taskId);
-                if (!task) return null;
-
-                return (
-                  <GoalCard
-                    key={goal.id}
-                    title={task.title}
-                    current={goal.current}
-                    target={goal.target}
-                    unit={task.unit}
-                    completed={false}
-                    onLongPress={() => handleDeleteGoal(goal.id)}
-                  />
-                );
-              })
-            )}
+          {/* Sub-tabs for Goals */}
+          <View style={styles.goalsSubTabs}>
+            <Pressable
+              style={[styles.subTab, goalsSubTab === 'my' && styles.subTabActive]}
+              onPress={() => {
+                setGoalsSubTab('my');
+                setSearchQuery('');
+                setSelectionMode(false);
+                setSelectedItems(new Set());
+              }}
+            >
+              <Text style={[styles.subTabText, goalsSubTab === 'my' && styles.subTabTextActive]}>
+                My Goals
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.subTab, goalsSubTab === 'group' && styles.subTabActive]}
+              onPress={() => {
+                setGoalsSubTab('group');
+                setSearchQuery('');
+                setSelectionMode(false);
+                setSelectedItems(new Set());
+              }}
+            >
+              <Text style={[styles.subTabText, goalsSubTab === 'group' && styles.subTabTextActive]}>
+                Group Goals
+              </Text>
+            </Pressable>
           </View>
 
-          {/* Completed Goals Section */}
-          {completedGoals.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Completed Goals</Text>
-              {completedGoals.map((goal) => {
-                const task = getTaskById(goal.taskId);
-                if (!task) return null;
+          {goalsSubTab === 'my' ? (
+            <>
+              {/* Botão de seleção múltipla para My Goals */}
+              {activeGoals.length > 0 && (
+                <View style={styles.actionBar}>
+                  <Pressable 
+                    style={[styles.selectionButton, selectionMode && styles.selectionButtonActive]}
+                    onPress={toggleSelectionMode}
+                  >
+                    <Ionicons name={selectionMode ? "checkmark-circle" : "checkmark-circle-outline"} size={20} color={selectionMode ? "#fff" : "#5ca990"} />
+                    <Text style={[styles.selectionButtonText, selectionMode && styles.selectionButtonTextActive]}>
+                      {selectionMode ? `Selected: ${selectedItems.size}` : 'Select Multiple'}
+                    </Text>
+                  </Pressable>
+                  
+                  {selectionMode && selectedItems.size > 0 && (
+                    <Pressable 
+                      style={styles.deleteSelectedButton}
+                      onPress={deleteSelectedItems}
+                    >
+                      <Ionicons name="trash" size={20} color="#fff" />
+                      <Text style={styles.deleteSelectedButtonText}>Delete</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+              
+              {/* My Active Goals Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Active Goals</Text>
+                {activeGoals.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No active goals yet</Text>
+                    <Text style={styles.emptySubtext}>Add a new challenge to get started!</Text>
+                  </View>
+                ) : (
+                  activeGoals.map((goal) => {
+                    const task = getTaskById(goal.taskId);
+                    if (!task) return null;
 
-                return (
-                  <GoalCard
-                    key={goal.id}
-                    title={task.title}
-                    current={goal.target}
-                    target={goal.target}
-                    unit={task.unit}
-                    completed={true}
-                    onLongPress={() => handleDeleteGoal(goal.id)}
-                  />
-                );
-              })}
-            </View>
+                    return (
+                      <Pressable
+                        key={goal.id}
+                        onPress={() => selectionMode && toggleItemSelection(goal.id)}
+                        onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
+                        style={[styles.cardWrapper, selectedItems.has(goal.id) && styles.cardWrapperSelected]}
+                      >
+                        {selectionMode && (
+                          <View style={styles.checkbox}>
+                            <Ionicons 
+                              name={selectedItems.has(goal.id) ? "checkbox" : "square-outline"} 
+                              size={24} 
+                              color={selectedItems.has(goal.id) ? "#5ca990" : "#666"} 
+                            />
+                          </View>
+                        )}
+                        <GoalCard
+                          title={task.title}
+                          current={goal.current}
+                          target={goal.target}
+                          unit={task.unit}
+                          completed={false}
+                          onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
+                        />
+                      </Pressable>
+                    );
+                  })
+                )}
+              </View>
+
+              {/* My Completed Goals Section */}
+              {completedGoals.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Completed Goals</Text>
+                  {completedGoals.map((goal) => {
+                    const task = getTaskById(goal.taskId);
+                    if (!task) return null;
+
+                    return (
+                      <GoalCard
+                        key={goal.id}
+                        title={task.title}
+                        current={goal.target}
+                        target={goal.target}
+                        unit={task.unit}
+                        completed={true}
+                        onLongPress={() => handleDeleteGoal(goal.id)}
+                      />
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Group Active Goals Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Active Group Goals</Text>
+                {activeGroupGoals.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No active group goals</Text>
+                    <Text style={styles.emptySubtext}>Join a group and start collaborating on goals!</Text>
+                  </View>
+                ) : (
+                  activeGroupGoals.map((goal) => {
+                    const task = getGroupTaskById(goal.taskId);
+                    const group = joinedGroups.find(g => g.id === goal.groupId);
+                    if (!task || !group) return null;
+                    
+                    // Obter contribuição do utilizador
+                    const userContribution = userId ? (goal.memberProgress[userId] || 0) : 0;
+
+                    return (
+                      <View key={goal.id} style={styles.groupGoalWrapper}>
+                        <View style={styles.groupGoalHeader}>
+                          <Ionicons name="people" size={16} color="#5ca990" />
+                          <Text style={styles.groupGoalGroupName}>{group.name}</Text>
+                        </View>
+                        <GroupGoalCard
+                          title={task.title}
+                          current={goal.currentProgress}
+                          target={goal.target}
+                          unit={task.unit}
+                          memberCount={group.members.length}
+                          completed={false}
+                          icon={task.icon}
+                          userContribution={userContribution}
+                          onPress={() => router.push(`/group-page?id=${group.id}` as any)}
+                        />
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+
+              {/* Group Completed Goals Section */}
+              {completedGroupGoals.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Completed Group Goals</Text>
+                  {completedGroupGoals.map((goal) => {
+                    const task = getGroupTaskById(goal.taskId);
+                    const group = joinedGroups.find(g => g.id === goal.groupId);
+                    if (!task || !group) return null;
+                    
+                    // Obter contribuição do utilizador
+                    const userContribution = userId ? (goal.memberProgress[userId] || 0) : 0;
+
+                    return (
+                      <View key={goal.id} style={styles.groupGoalWrapper}>
+                        <View style={styles.groupGoalHeader}>
+                          <Ionicons name="people" size={16} color="#5ca990" />
+                          <Text style={styles.groupGoalGroupName}>{group.name}</Text>
+                        </View>
+                        <GroupGoalCard
+                          title={task.title}
+                          current={goal.currentProgress}
+                          target={goal.target}
+                          unit={task.unit}
+                          memberCount={group.members.length}
+                          completed={true}
+                          icon={task.icon}
+                          userContribution={userContribution}
+                          onPress={() => router.push(`/group-page?id=${group.id}` as any)}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </>
           )}
         </>
       );
     }
 
     // Tab "new"
+    const filteredDisplayedGroups = showAllGroups ? filteredAllGroups : filteredAllGroups.slice(0, 3);
+    
     return (
       <>
+        {/* Barra de pesquisa */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search groups..."
+            placeholderTextColor="#666"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </Pressable>
+          )}
+        </View>
+        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Suggested Groups</Text>
           {suggestedGroups.length === 0 ? (
@@ -393,10 +673,17 @@ export default function Groups() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>All Groups</Text>
-          {displayedGroups.length === 0 ? (
-            <Text style={styles.emptyText}>No available groups</Text>
+          {filteredDisplayedGroups.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery ? 'No groups found' : 'No available groups'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {searchQuery && 'Try a different search'}
+              </Text>
+            </View>
           ) : (
-            displayedGroups.map((group) => (
+            filteredDisplayedGroups.map((group) => (
               <GroupListCard
                 key={group.id}
                 name={group.name}
@@ -407,7 +694,7 @@ export default function Groups() {
             ))
           )}
 
-          {!showAllGroups && allGroups.length > 3 && (
+          {!showAllGroups && filteredAllGroups.length > 3 && (
             <View style={styles.buttonContainer}>
               <BotaoCustom
                 titulo="See More"
@@ -668,5 +955,133 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  goalsSubTabs: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(26, 26, 26, 0.5)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+    gap: 4,
+  },
+  subTab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  subTabActive: {
+    backgroundColor: '#5ca990',
+  },
+  subTabText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  subTabTextActive: {
+    color: '#fff',
+  },
+  groupGoalWrapper: {
+    marginBottom: 16,
+  },
+  groupGoalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: 'rgba(92, 169, 144, 0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#5ca990',
+  },
+  groupGoalGroupName: {
+    color: '#5ca990',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(26, 26, 26, 0.5)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  selectionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(92, 169, 144, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#5ca990',
+    gap: 8,
+  },
+  selectionButtonActive: {
+    backgroundColor: '#5ca990',
+  },
+  selectionButtonText: {
+    color: '#5ca990',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectionButtonTextActive: {
+    color: '#fff',
+  },
+  deleteSelectedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e53935',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 8,
+  },
+  deleteSelectedButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cardWrapper: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  cardWrapperSelected: {
+    opacity: 0.7,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 6,
+    padding: 4,
   },
 });

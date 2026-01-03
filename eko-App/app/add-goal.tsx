@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BotaoCustom from '@/components/buttons';
 import { useNotification } from '@/contexts/NotificationContext';
-import { PREDEFINED_TASKS, PredefinedTask, createUserGoal } from '@/models/goals';
+import { PREDEFINED_TASKS, PredefinedTask, createUserGoal, getUserGoals, UserGoal } from '@/models/goals';
 import { getLoggedInUser } from '@/models/users';
 
 export default function AddGoal() {
@@ -24,6 +24,7 @@ export default function AddGoal() {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [userActiveGoals, setUserActiveGoals] = useState<UserGoal[]>([]);
 
   useEffect(() => {
     loadUser();
@@ -38,6 +39,11 @@ export default function AddGoal() {
         return;
       }
       setUserId(user.id);
+      
+      // Carregar goals ativos do usuário
+      const goals = await getUserGoals(user.id);
+      const activeGoals = goals.filter(g => !g.completed);
+      setUserActiveGoals(activeGoals);
     } catch (error) {
       console.error('Error loading user:', error);
       router.back();
@@ -128,54 +134,61 @@ export default function AddGoal() {
         </Text>
 
         {/* Task Cards */}
-        {PREDEFINED_TASKS.map((task) => (
-          <TouchableOpacity
-            key={task.id}
-            style={[
-              styles.taskCard,
-              selectedTask?.id === task.id && styles.taskCardSelected,
-            ]}
-            onPress={() => handleTaskSelect(task)}
-          >
-            <View style={styles.taskHeader}>
-              <View
-                style={[
-                  styles.iconContainer,
-                  { backgroundColor: getCategoryColor(task.category, selectedTask?.id === task.id) },
-                ]}
-              >
-                <Ionicons name={task.icon as any} size={24} color="#fff" />
-              </View>
-              <View style={styles.taskInfo}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
-                <Text style={styles.taskDescription}>{task.description}</Text>
-              </View>
-              {selectedTask?.id === task.id && (
-                <Ionicons name="checkmark-circle" size={24} color="#5ca990" />
-              )}
-            </View>
-
-            {selectedTask?.id === task.id && (
-              <View style={styles.targetContainer}>
-                <Text style={styles.targetLabel}>Target:</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    value={targetValue}
-                    onChangeText={setTargetValue}
-                    keyboardType="number-pad"
-                    placeholder={task.defaultTarget.toString()}
-                    placeholderTextColor="#666"
-                  />
-                  <Text style={styles.unit}>{task.unit}</Text>
+        {PREDEFINED_TASKS.map((task) => {
+          const isActive = userActiveGoals.some(g => g.taskId === task.id);
+          return (
+            <TouchableOpacity
+              key={task.id}
+              style={[
+                styles.taskCard,
+                selectedTask?.id === task.id && styles.taskCardSelected,
+                isActive && styles.taskCardDisabled,
+              ]}
+              onPress={() => !isActive && handleTaskSelect(task)}
+              disabled={isActive}
+            >
+              <View style={styles.taskHeader}>
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: isActive ? '#666' : getCategoryColor(task.category, selectedTask?.id === task.id) },
+                  ]}
+                >
+                  <Ionicons name={task.icon as any} size={24} color="#fff" />
                 </View>
-                <Text style={styles.rangeText}>
-                  ({task.minTarget} - {task.maxTarget} {task.unit})
-                </Text>
+                <View style={styles.taskInfo}>
+                  <Text style={[styles.taskTitle, isActive && styles.taskTitleDisabled]}>{task.title}</Text>
+                  <Text style={[styles.taskDescription, isActive && styles.taskDescriptionDisabled]}>
+                    {isActive ? 'Already active' : task.description}
+                  </Text>
+                </View>
+                {selectedTask?.id === task.id && !isActive && (
+                  <Ionicons name="checkmark-circle" size={24} color="#5ca990" />
+                )}
               </View>
-            )}
-          </TouchableOpacity>
-        ))}
+
+              {selectedTask?.id === task.id && !isActive && (
+                <View style={styles.targetContainer}>
+                  <Text style={styles.targetLabel}>Target:</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={targetValue}
+                      onChangeText={setTargetValue}
+                      keyboardType="number-pad"
+                      placeholder={task.defaultTarget.toString()}
+                      placeholderTextColor="#666"
+                    />
+                    <Text style={styles.unit}>{task.unit}</Text>
+                  </View>
+                  <Text style={styles.rangeText}>
+                    ({task.minTarget} - {task.maxTarget} {task.unit})
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
 
         {/* Error Message */}
         {errorMessage && (
@@ -248,6 +261,10 @@ const styles = StyleSheet.create({
     borderColor: '#5ca990',
     backgroundColor: 'rgba(92, 169, 144, 0.1)',
   },
+  taskCardDisabled: {
+    opacity: 0.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
   taskHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,9 +286,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 4,
   },
+  taskTitleDisabled: {
+    color: '#666',
+  },
   taskDescription: {
     fontSize: 12,
     color: '#999',
+  },
+  taskDescriptionDisabled: {
+    color: '#555',
   },
   targetContainer: {
     marginTop: 16,
@@ -301,6 +324,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     paddingVertical: 12,
+    outlineStyle: 'none',
   },
   unit: {
     fontSize: 16,

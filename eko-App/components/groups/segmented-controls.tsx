@@ -29,6 +29,9 @@ export default function SegmentedControls({ tabs, selectedTab, onSelectTab }: Se
                 styles.segmentText,
                 selectedTab === tab.key && styles.segmentTextActive,
               ]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
             >
               {tab.label}
             </Text>
@@ -54,12 +57,13 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
+    minHeight: 44,
   },
   segmentFirst: {
     borderTopLeftRadius: 9,
@@ -82,10 +86,13 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   segmentText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#999',
     zIndex: 1,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+    lineHeight: 16,
   },
   segmentTextActive: {
     color: '#fff',
