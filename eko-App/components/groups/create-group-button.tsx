@@ -9,7 +9,7 @@ interface FloatingAddButtonProps {
 export default function FloatingAddButton({ onPress }: FloatingAddButtonProps) {
   return (
     <Pressable style={styles.floatingButton} onPress={onPress}>
-      <Ionicons name="add" size={32} color="#fff" />
+      <Ionicons name="add" size={28} color="#fff" />
     </Pressable>
   );
 }
@@ -19,9 +19,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#5ca990',
     justifyContent: 'center',
     alignItems: 'center',

@@ -8,6 +8,7 @@ interface BotaoProps {
     navegarPara?: string;
     variante?: 'primario' | 'secundario';
     style?: ViewStyle;
+    disabled?: boolean;
 }
 
 export default function BotaoCustom({ 
@@ -15,11 +16,13 @@ export default function BotaoCustom({
     onPress, 
     navegarPara,
     variante = 'primario', 
-    style 
+    style,
+    disabled = false
 }: BotaoProps) {
     const router = useRouter();
 
     const handlePress = () => {
+        if (disabled) return;
         if (navegarPara) {
             router.push(navegarPara as any);
         } else if (onPress) {
@@ -33,13 +36,16 @@ export default function BotaoCustom({
             style={[
                 styles.botaoBase, 
                 variante === 'primario' ? styles.primario : styles.secundario,
+                disabled && styles.disabled,
                 style
             ]}
-            activeOpacity={0.7}
+            activeOpacity={disabled ? 1 : 0.7}
+            disabled={disabled}
         >
                 <Text style={[
                     styles.textoBase,
-                    variante === 'primario' ? styles.textoPrimario : styles.textoSecundario
+                    variante === 'primario' ? styles.textoPrimario : styles.textoSecundario,
+                    disabled && styles.textoDisabled
                 ]}>
                     {titulo}
                 </Text>
@@ -74,5 +80,11 @@ const styles = StyleSheet.create({
     },
     textoSecundario: {
         color: '#FFFFFF',
+    },
+    disabled: {
+        opacity: 0.5,
+    },
+    textoDisabled: {
+        opacity: 0.7,
     },
 });
