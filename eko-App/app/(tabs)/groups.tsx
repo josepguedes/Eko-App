@@ -60,7 +60,7 @@ export default function Groups() {
 
   const tabs = [
     { key: "new", label: "Explore Groups" },
-    { key: "joined", label: "Joined Groups" },
+    { key: "joined", label: "Your Groups" },
     { key: "goals", label: "Goals" },
   ];
 
