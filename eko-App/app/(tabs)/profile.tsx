@@ -10,6 +10,7 @@ import StatsRow from '@/components/profile/stats-row';
 import SettingsItem from '@/components/profile/settings-item';
 import SettingsSection from '@/components/profile/settings-section';
 import { getLoggedInUser, logoutUser, User } from '@/models/users';
+import { getUserGoals } from '@/models/goals';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen() {
@@ -19,10 +20,10 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [lightModeEnabled, setLightModeEnabled] = useState(false);
 
-  // Mock stats - will be replaced with real data from user goals
-  const [stats] = useState({
+  // Stats - now calculated from user goals
+  const [stats, setStats] = useState({
     score: 210,
-    totalGoals: 27,
+    totalGoals: 0,
     avgScore: 4.2,
   });
 
@@ -41,6 +42,17 @@ export default function ProfileScreen() {
     try {
       const loggedUser = await getLoggedInUser();
       setUser(loggedUser);
+      
+      // Calculate completed goals
+      if (loggedUser) {
+        const userGoals = await getUserGoals(loggedUser.id);
+        const completedGoalsCount = userGoals.filter(goal => goal.completed).length;
+        
+        setStats(prevStats => ({
+          ...prevStats,
+          totalGoals: completedGoalsCount,
+        }));
+      }
     } catch (error) {
       console.error('Error loading user:', error);
     } finally {

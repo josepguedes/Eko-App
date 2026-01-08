@@ -39,11 +39,11 @@ export default function StatsRow({ score, totalGoals, avgScore }: StatsRowProps)
       
       <View style={styles.divider} />
       
-      <StatItem 
-        icon="target-outline" 
-        value={totalGoals.toString()} 
-        label="Total Goals" 
-      />
+    <StatItem 
+      icon="checkmark-circle-outline" 
+      value={totalGoals.toString()} 
+      label="Completed Goals" 
+    />
       
       <View style={styles.divider} />
       
