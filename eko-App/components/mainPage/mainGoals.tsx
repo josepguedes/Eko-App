@@ -27,10 +27,12 @@ export default function MyGoals({
   const [goals, setGoals] = React.useState<GoalItemWithDetails[]>([]);
   const [progress, setProgress] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const loadUserGoals = async () => {
     try {
       setLoading(true);
+      setError(null);
       const loggedInUser = await getLoggedInUser();
       
       if (!loggedInUser) {
@@ -69,6 +71,7 @@ export default function MyGoals({
       }
     } catch (error) {
       console.error('Error loading user goals:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load goals');
       setGoals([]);
       setProgress(0);
     } finally {
@@ -98,6 +101,39 @@ export default function MyGoals({
       <SafeAreaView edges={['bottom']} style={styles.container}>
         <View style={[styles.card, styles.centerContent]}>
           <ActivityIndicator size="large" color="#5ca990" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView edges={['bottom']} style={styles.container}>
+        <View style={styles.card}>
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View style={styles.iconWrapper}>
+                <Image 
+                  style={styles.targetIcon} 
+                  source={require('@/assets/images/targetIcon.png')}
+                  resizeMode="contain" 
+                />
+              </View>
+              <Text style={styles.title}>{title}</Text>
+            </View>
+          </View>
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle-outline" size={48} color="#ff6b6b" />
+            <Text style={styles.emptyText}>Error loading goals</Text>
+            <Text style={styles.emptySubtext}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={loadUserGoals}
+            >
+              <Ionicons name="refresh" size={20} color="#fff" />
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -337,5 +373,20 @@ const styles = StyleSheet.create({
     color: '#a9a9a9',
     marginTop: 8,
     textAlign: 'center',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#5ca990',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

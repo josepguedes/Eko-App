@@ -65,6 +65,25 @@ export default function Groups() {
     { key: "goals", label: "Goals" },
   ];
 
+  // Cache de tasks para evitar múltiplas chamadas de getTaskById
+  const taskCache = useMemo(() => {
+    const cache = new Map();
+    userGoals.forEach(goal => {
+      const task = getTaskById(goal.taskId);
+      if (task) cache.set(goal.taskId, task);
+    });
+    return cache;
+  }, [userGoals]);
+
+  const groupTaskCache = useMemo(() => {
+    const cache = new Map();
+    groupGoals.forEach(goal => {
+      const task = getGroupTaskById(goal.taskId);
+      if (task) cache.set(goal.taskId, task);
+    });
+    return cache;
+  }, [groupGoals]);
+
   useFocusEffect(
     React.useCallback(() => {
       loadData();
@@ -141,7 +160,7 @@ export default function Groups() {
       // Show notification and redirect to group page
       const joinedGroup = await getGroupById(groupId);
       if (joinedGroup) {
-        showNotification('success', `🎉 Successfully joined ${joinedGroup.name}!`);
+        showNotification('success', `Successfully joined ${joinedGroup.name}!`);
         setTimeout(() => {
           router.push(`/group-page?id=${groupId}` as any);
         }, 1500);
@@ -173,7 +192,7 @@ export default function Groups() {
       setLeaveModalVisible(false);
       setSelectedGroup(null);
       await loadData();
-      showNotification('success', `👋 Successfully left ${groupName}`);
+      showNotification('success', `Successfully left ${groupName}`);
     } catch (error) {
       console.error('Error leaving group:', error);
       if (error instanceof Error) {
@@ -201,7 +220,7 @@ export default function Groups() {
       setDeleteGoalModalVisible(false);
       setSelectedGoal(null);
       await loadData();
-      showNotification('success', `🗑️ Successfully deleted goal: ${task?.title || 'Goal'}`);
+      showNotification('success', `Successfully deleted goal: ${task?.title || 'Goal'}`);
     } catch (error) {
       console.error('Error deleting goal:', error);
       if (error instanceof Error) {
@@ -311,7 +330,7 @@ export default function Groups() {
       await loadData();
       
       // Show notification and redirect to group page
-      showNotification('success', `🎉 Successfully joined ${groupName}!`);
+      showNotification('success', `Successfully joined ${groupName}!`);
       setTimeout(() => {
         router.push(`/group-page?id=${groupId}` as any);
       }, 1500);
@@ -489,7 +508,7 @@ export default function Groups() {
                   </View>
                 ) : (
                   activeGoals.map((goal) => {
-                    const task = getTaskById(goal.taskId);
+                    const task = taskCache.get(goal.taskId);
                     if (!task) return null;
 
                     return (
@@ -522,7 +541,7 @@ export default function Groups() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Completed Goals</Text>
                   {completedGoals.map((goal) => {
-                    const task = getTaskById(goal.taskId);
+                    const task = taskCache.get(goal.taskId);
                     if (!task) return null;
 
                     return (
@@ -552,7 +571,7 @@ export default function Groups() {
                   </View>
                 ) : (
                   activeGroupGoals.map((goal) => {
-                    const task = getGroupTaskById(goal.taskId);
+                    const task = groupTaskCache.get(goal.taskId);
                     const group = joinedGroups.find(g => g.id === goal.groupId);
                     if (!task || !group) return null;
                     
@@ -587,7 +606,7 @@ export default function Groups() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Completed Group Goals</Text>
                   {completedGroupGoals.map((goal) => {
-                    const task = getGroupTaskById(goal.taskId);
+                    const task = groupTaskCache.get(goal.taskId);
                     const group = joinedGroups.find(g => g.id === goal.groupId);
                     if (!task || !group) return null;
                     

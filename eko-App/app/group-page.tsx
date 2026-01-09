@@ -235,7 +235,7 @@ export default function GroupDetails() {
       await loadGroupData();
       setEditNameModalVisible(false);
       setMenuVisible(false);
-      showNotification('success', `✏️ Group renamed from "${oldName}" to "${newGroupName.trim()}"`);
+      showNotification('success', `Group renamed from "${oldName}" to "${newGroupName.trim()}"`);
     } catch (error) {
       console.error('Error updating group name:', error);
       showNotification('critical', 'Failed to update group name. Please try again.');
@@ -248,6 +248,11 @@ export default function GroupDetails() {
 
     if (isNaN(maxMembers) || maxMembers < 2) {
       showNotification('critical', 'You must have at least 2 members minimum');
+      return;
+    }
+    
+    if (maxMembers > 50) {
+      showNotification('critical', 'Maximum limit is 50 members');
       return;
     }
 
@@ -263,7 +268,7 @@ export default function GroupDetails() {
       await loadGroupData();
       setEditMaxMembersModalVisible(false);
       setMenuVisible(false);
-      showNotification('success', `👥 Max members changed from ${oldMax} to ${maxMembers}`);
+      showNotification('success', `Max members changed from ${oldMax} to ${maxMembers}`);
     } catch (error) {
       console.error('Error updating max members:', error);
       showNotification('critical', 'Failed to update maximum members. Please try again.');
@@ -282,7 +287,7 @@ export default function GroupDetails() {
       await loadGroupData();
       setKickMemberModalVisible(false);
       setMemberToKick(null);
-      showNotification('success', `👋 ${memberName} was removed from the group`);
+      showNotification('success', `${memberName} was removed from the group`);
     } catch (error) {
       console.error('Error kicking member:', error);
       showNotification('critical', 'Failed to remove member. Please try again.');
@@ -317,7 +322,7 @@ export default function GroupDetails() {
       setAddGoalModalVisible(false);
       setSelectedTaskId('');
       setGoalTarget('');
-      showNotification('success', `🎯 New group goal created: ${task?.title || 'Goal'}!`);
+      showNotification('success', `New group goal created: ${task?.title || 'Goal'}!`);
     } catch (error) {
       console.error('Error creating group goal:', error);
       showNotification('critical', 'Failed to create group goal');
@@ -330,7 +335,7 @@ export default function GroupDetails() {
       const task = goal ? getTaskById(goal.taskId) : null;
       await deleteGroupGoal(goalId);
       await loadGroupData();
-      showNotification('success', `🗑️ Group goal "${task?.title || 'Goal'}" deleted successfully`);
+      showNotification('success', `Group goal "${task?.title || 'Goal'}" deleted successfully`);
     } catch (error) {
       console.error('Error deleting group goal:', error);
       showNotification('critical', 'Failed to delete group goal');
@@ -820,7 +825,7 @@ export default function GroupDetails() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setMembersModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Fechar</Text>
+                <Text style={styles.cancelButtonText}>Close</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -1071,7 +1076,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 50,
     paddingBottom: 16,
   },
   backButton: {
@@ -1089,20 +1094,20 @@ const styles = StyleSheet.create({
   },
   menuDropdown: {
     position: 'absolute',
-    top: 90,
+    top: 120,
     right: 16,
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
+    zIndex: 100,
+    elevation: 100,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingVertical: 8,
-    zIndex: 1000,
     minWidth: 220,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
   },
   menuItem: {
     flexDirection: 'row',
@@ -1154,6 +1159,7 @@ const styles = StyleSheet.create({
   },
   chatWrapper: {
     flex: 1,
+    position: 'relative',
   },
   chatContainer: {
     flex: 1,
@@ -1161,7 +1167,7 @@ const styles = StyleSheet.create({
   },
   chatContent: {
     paddingHorizontal: 12,
-    paddingBottom: 16,
+    paddingBottom: 80,
   },
   emptyChat: {
     flex: 1,
@@ -1221,6 +1227,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   messageInputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -1274,6 +1284,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
   modalContent: {
     backgroundColor: '#1a1a1a',

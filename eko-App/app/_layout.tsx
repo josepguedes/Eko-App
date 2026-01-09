@@ -17,17 +17,20 @@ export default function RootLayout() {
   return (
     <NotificationProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="register" options={{ headerShown: false }} />
-          <Stack.Screen name="create-group" options={{ headerShown: false }} />
-          <Stack.Screen name="add-goal" options={{ headerShown: false }} />
-          <Stack.Screen name="group-details" options={{ headerShown: false }} />
-          <Stack.Screen name="group-page" options={{ headerShown: false }} />
-          <Stack.Screen name="create-goals" options={{ headerShown: false }} />
-          <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+        <Stack screenOptions={{ 
+          headerShown: false,
+          animation: 'none',
+        }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="modal" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="login" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="register" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="create-group" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="add-goal" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="group-details" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="group-page" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="create-goals" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="edit-profile" options={{ headerShown: false, animation: 'none' }} />
         </Stack>
         <GlobalNotification />
         <StatusBar style="auto" />

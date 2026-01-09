@@ -32,12 +32,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
+    console.log('NotificationContext: showNotification called with:', { type, message, duration });
+    
     // Limpar timeout anterior se existir
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
     setNotification({ visible: true, type, message });
+    console.log('NotificationContext: notification state updated');
 
     // Auto-hide após o duration
     const newTimeoutId = setTimeout(() => {

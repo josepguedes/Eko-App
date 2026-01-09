@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     overflow: 'hidden',
     height: 88,
-    marginBottom:  80,
+    marginBottom: 0,
   },
   view2FlexBox: {
     justifyContent: 'center',

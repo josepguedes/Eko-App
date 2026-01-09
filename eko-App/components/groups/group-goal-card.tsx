@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,15 +27,19 @@ export default function GroupGoalCard({
   onLongPress,
   userContribution = 0,
 }: GroupGoalCardProps) {
+  const [isPressed, setIsPressed] = useState(false);
   const progress = Math.min((current / target) * 100, 100);
   const progressPerMember = memberCount > 0 ? current / memberCount : 0;
 
   return (
     <TouchableOpacity
-      style={[styles.card, completed && styles.completedCard]}
+      style={[styles.card, completed && styles.completedCard, isPressed && styles.pressedCard]}
       onPress={onPress}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
       onLongPress={onLongPress}
       delayLongPress={500}
+      activeOpacity={0.7}
     >
       <View style={styles.header}>
         <View style={styles.titleContainer}>
@@ -89,6 +93,10 @@ const styles = StyleSheet.create({
   completedCard: {
     borderColor: '#5ca990',
     backgroundColor: 'rgba(92, 169, 144, 0.1)',
+  },
+  pressedCard: {
+    opacity: 0.7,
+    transform: [{ scale: 0.98 }],
   },
   header: {
     flexDirection: 'row',
