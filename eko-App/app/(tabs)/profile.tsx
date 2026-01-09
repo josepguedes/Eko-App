@@ -18,7 +18,6 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [lightModeEnabled, setLightModeEnabled] = useState(false);
 
   // Stats - now calculated from user goals
   const [stats, setStats] = useState({
@@ -76,20 +75,16 @@ export default function ProfileScreen() {
     router.push('/edit-profile');
   };
 
-  const handleConnectCar = () => {
-    console.log('Navigate to connect car');
-  };
-
   const handleUnits = () => {
     console.log('Navigate to units settings');
   };
 
   const handleTerms = () => {
-    console.log('Navigate to terms & conditions');
+    router.push('/terms');
   };
 
   const handleSupport = () => {
-    console.log('Navigate to support/help');
+    router.push('/support');
   };
 
   if (loading) {
@@ -145,13 +140,6 @@ export default function ProfileScreen() {
             showDivider
           />
           <SettingsItem
-            icon="bluetooth-outline"
-            label="Connect Car"
-            type="navigation"
-            onPress={handleConnectCar}
-            showDivider
-          />
-          <SettingsItem
             icon="speedometer-outline"
             label="Units"
             type="navigation"
@@ -176,14 +164,6 @@ export default function ProfileScreen() {
 
         {/* Settings Section 2 */}
         <SettingsSection>
-          <SettingsItem
-            icon="moon-outline"
-            label="Light Mode"
-            type="toggle"
-            toggleValue={lightModeEnabled}
-            onToggle={setLightModeEnabled}
-            showDivider
-          />
           <SettingsItem
             icon="log-out-outline"
             label="Logout"
