@@ -87,6 +87,11 @@ export default function CreateGroup() {
       Alert.alert("Error", "You must have at least 2 members minimum");
       return;
     }
+    
+    if (maxUsers > 50) {
+      Alert.alert("Error", "Maximum limit is 50 members");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -356,7 +361,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 20,
   },
   backButton: {

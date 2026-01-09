@@ -53,7 +53,34 @@ export async function createGroupGoal(
   target: number,
   createdBy: string
 ): Promise<GroupGoal> {
+  // Validações
+  if (!groupId || !taskId || !createdBy) {
+    throw new Error('Missing required fields: groupId, taskId, and createdBy are required');
+  }
+  
+  if (typeof target !== 'number' || target <= 0) {
+    throw new Error('Target must be a positive number');
+  }
+  
+  if (!Number.isFinite(target)) {
+    throw new Error('Target must be a valid number');
+  }
+  
+  // Verificar se a task existe
+  const task = getGroupTaskById(taskId);
+  if (!task) {
+    throw new Error(`Task with id "${taskId}" not found`);
+  }
+  
   const allGoals = await getAllGroupGoals();
+  
+  // Verificar se já existe um goal ativo para este grupo e task
+  const existingGoal = allGoals.find(
+    g => g.groupId === groupId && g.taskId === taskId && !g.completed
+  );
+  if (existingGoal) {
+    throw new Error(`An active goal for this task already exists in this group`);
+  }
   
   const newGoal: GroupGoal = {
     id: Date.now().toString(),
@@ -79,14 +106,31 @@ export async function updateGroupGoalProgress(
   userId: string,
   progress: number
 ): Promise<{ goalCompleted?: boolean }> {
+  // Validações
+  if (!goalId || !userId) {
+    throw new Error('Missing required fields: goalId and userId are required');
+  }
+  
+  if (typeof progress !== 'number' || progress < 0) {
+    throw new Error('Progress must be a non-negative number');
+  }
+  
+  if (!Number.isFinite(progress)) {
+    throw new Error('Progress must be a valid number');
+  }
+  
   const allGoals = await getAllGroupGoals();
   const goalIndex = allGoals.findIndex(g => g.id === goalId);
   
   if (goalIndex === -1) {
-    throw new Error('Group goal not found');
+    throw new Error(`Group goal with id "${goalId}" not found`);
   }
   
   const goal = allGoals[goalIndex];
+  
+  if (goal.completed) {
+    throw new Error('Cannot update progress for a completed goal');
+  }
   
   // Update individual member progress
   goal.memberProgress[userId] = progress;

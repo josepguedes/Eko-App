@@ -7,6 +7,7 @@ interface SuggestedGroupCardProps {
   members: number;
   image: ImageSourcePropType;
   onJoin?: () => void;
+  group?: any;
 }
 
 export default function SuggestedGroupCard({ name, members, image, onJoin }: SuggestedGroupCardProps) {

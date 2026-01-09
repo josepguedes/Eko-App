@@ -20,6 +20,11 @@ export default function Notification({
   icon 
 }: NotificationProps) {
   
+  // Debug log para verificar se a mensagem está chegando
+  React.useEffect(() => {
+    console.log('Notification rendered with message:', message);
+  }, [message]);
+  
   const getIcon = () => {
     if (icon) return icon;
     
@@ -39,7 +44,9 @@ export default function Notification({
       <View style={styles.iconContainer}>
         <Ionicons name={getIcon()} size={20} color="#5ca990" />
       </View>
-      <Text style={styles.description}>{message}</Text>
+      <Text style={styles.description} numberOfLines={3} ellipsizeMode="tail">
+        {message || 'Notification'}
+      </Text>
       {actionText && onAction && (
         <TouchableOpacity style={styles.button} onPress={onAction}>
           <View style={styles.base}>
@@ -74,6 +81,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    minHeight: 56,
+    width: '100%',
+    maxWidth: 400,
   },
   iconContainer: {
     width: 32,
@@ -84,6 +94,7 @@ const styles = StyleSheet.create({
     borderColor: '#5ca990',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   description: {
     textAlign: "left",
@@ -92,6 +103,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontSize: 14,
     fontWeight: '500',
+    minHeight: 20,
+    flexWrap: 'wrap',
+    flexShrink: 1,
   },
   button: {
     flexDirection: "row",
@@ -116,5 +130,6 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
 });

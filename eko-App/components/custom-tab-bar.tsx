@@ -78,7 +78,8 @@ const styles = StyleSheet.create({
   bottomNavbar: {
     backgroundColor: 'transparent',
     overflow: 'hidden',
-    height: Platform.OS === 'ios' ? 88 : 72,
+    height: 88,
+    marginBottom: 0,
   },
   view2FlexBox: {
     justifyContent: 'center',
