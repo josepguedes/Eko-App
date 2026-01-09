@@ -8,47 +8,51 @@ import * as ImagePicker from 'expo-image-picker';
 interface AvatarPickerProps {
   avatarUrl?: string;
   userName: string;
-  onAvatarChange?: (uri: string) => void;
+  onAvatarChange: (uri: string) => void;
 }
 
 export default function AvatarPicker({ avatarUrl, userName, onAvatarChange }: AvatarPickerProps) {
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera roll permissions to change your avatar.');
-      return;
-    }
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      onAvatarChange?.(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        let imageUri = asset.uri;
+        
+        // Convert to base64 for storage
+        if (asset.base64) {
+          imageUri = `data:image/jpeg;base64,${asset.base64}`;
+        }
+        
+        onAvatarChange(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={handlePickImage} style={styles.avatarWrapper}>
+      <View style={styles.avatarWrapper}>
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>
-              {userName.charAt(0).toUpperCase()}
-            </Text>
+            <Ionicons name="person" size={60} color="#fff" />
           </View>
         )}
-        
-        <View style={styles.editButton}>
-          <Ionicons name="pencil" size={16} color="#fff" />
-        </View>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.editButton} onPress={pickImage}>
+          <Ionicons name="camera" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -73,11 +77,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#5ca990',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#fff',
   },
   editButton: {
     position: 'absolute',

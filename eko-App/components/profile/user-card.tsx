@@ -11,26 +11,20 @@ interface UserCardProps {
   onPress?: () => void;
 }
 
-export default function UserCard({ name, email, avatarUrl, onPress }: UserCardProps) {
+export default function UserCard({ name, email, onPress, avatarUrl }: UserCardProps) {
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
+    <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.contentWrapper}>
         <View style={styles.avatarContainer}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {name.charAt(0).toUpperCase()}
-              </Text>
+              <Ionicons name="person" size={32} color="#fff" />
             </View>
           )}
         </View>
-        
+
         <View style={styles.textContainer}>
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.email}>{email}</Text>
@@ -71,11 +65,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#5ca990',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
   },
   textContainer: {
     flex: 1,

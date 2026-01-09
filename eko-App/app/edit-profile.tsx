@@ -20,9 +20,8 @@ import AvatarPicker from '@/components/profile/avatar-picker';
 import InputField from '@/components/profile/input-field';
 import BotaoCustom from '@/components/buttons';
 import { getLoggedInUser, updateUser, User } from '@/models/users';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SESSION_KEY = 'currentUser';
+const MASKED_PASSWORD = '******************';
 
 export default function EditProfile() {
   const router = useRouter();
@@ -39,7 +38,6 @@ export default function EditProfile() {
 
   // Track if password was changed
   const [passwordChanged, setPasswordChanged] = useState(false);
-  const MASKED_PASSWORD = '******************';
 
   useEffect(() => {
     loadUser();
@@ -52,10 +50,9 @@ export default function EditProfile() {
         setUser(loggedUser);
         setName(loggedUser.name);
         setEmail(loggedUser.email);
-        // Password is masked for security
+        setAvatarUrl(loggedUser.avatarUrl);
         setPassword(MASKED_PASSWORD);
-        // Phone would come from user data if available
-        setPhone(''); // Placeholder for future phone field
+        setPhone('');
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -95,9 +92,10 @@ export default function EditProfile() {
       setSaving(true);
 
       // Prepare updates object
-      const updates: Partial<{ email: string; name: string; password: string }> = {
+      const updates: Partial<Pick<User, 'email' | 'name' | 'password' | 'avatarUrl'>> = {
         name: name.trim(),
         email: email.trim(),
+        avatarUrl: avatarUrl,
       };
 
       // Only include password if it was changed
@@ -105,12 +103,15 @@ export default function EditProfile() {
         updates.password = password;
       }
 
+      console.log('Updating user with:', updates);
+
       // Update user using the service method
       await updateUser(user.id, updates);
 
-      Alert.alert('Success', 'Profile updated successfully', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      console.log('User updated successfully');
+
+      // Navigate back immediately after successful update
+      router.replace('/(tabs)/profile');
     } catch (error) {
       console.error('Error saving profile:', error);
       if (error instanceof Error) {
