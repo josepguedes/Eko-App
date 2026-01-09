@@ -123,6 +123,7 @@ export default function ProfileScreen() {
         <UserCard
           name={user.name}
           email={user.email}
+          avatarUrl={user.avatarUrl}
           onPress={handleUserCardPress}
         />
 

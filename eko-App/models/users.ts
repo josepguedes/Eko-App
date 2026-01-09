@@ -10,8 +10,9 @@ export class User {
     goals: string[];
     groups: string[];
     isLoggedIn: boolean = false;
+    avatarUrl?: string;
 
-    constructor(id: string, email: string, name: string, password: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false) {
+    constructor(id: string, email: string, name: string, password: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false, avatarUrl?: string) {
         if (!id || !email || !name || !password) {
             throw new Error('ID, email, nome e password são obrigatórios');
         }
@@ -24,6 +25,7 @@ export class User {
         this.goals = goals;
         this.groups = groups;
         this.isLoggedIn = isLoggedIn;
+        this.avatarUrl = avatarUrl;
     }
 
     toJSON() {
@@ -36,14 +38,12 @@ export class User {
             cars: this.cars,
             goals: this.goals,
             groups: this.groups,
-            isLoggedIn: this.isLoggedIn
+            isLoggedIn: this.isLoggedIn,
+            avatarUrl: this.avatarUrl
         };
     }
 
     static fromJSON(json: any): User {
-        if (!json) {
-            throw new Error('JSON inválido');
-        }
         return new User(
             json.id,
             json.email,
@@ -53,7 +53,8 @@ export class User {
             json.cars || [],
             json.goals || [],
             json.groups || [],
-            json.isLoggedIn || false
+            json.isLoggedIn || false,
+            json.avatarUrl
         );
     }
 
@@ -179,30 +180,28 @@ export async function deleteUser(id: string): Promise<void> {
     }
 }
 
-export async function updateUser(userId: string, updates: Partial<Pick<User, 'email' | 'name' | 'password'>>): Promise<void> {
-    if (!userId) {
-        throw new Error('ID é obrigatório');
-    }
-    const user = await getUserById(userId);
-    if (!user) {
+export async function updateUser(userId: string, updates: Partial<Pick<User, 'email' | 'name' | 'password' | 'avatarUrl'>>): Promise<void> {
+    const users = await getAllUsers();
+    const index = users.findIndex(u => u.id === userId);
+    
+    if (index === -1) {
         throw new Error('Utilizador não encontrado');
     }
+
+    const user = users[index];
     
-    if (updates.email) {
-        // Check if email is already in use by another user
-        const users = await getAllUsers();
-        const existingUser = users.find(u => u.email.toLowerCase() === updates.email!.toLowerCase() && u.id !== userId);
-        if (existingUser) {
-            throw new Error('Este email já está a ser utilizado');
-        }
-        user.email = updates.email;
-    }
-    if (updates.name) user.name = updates.name;
-    if (updates.password) user.password = updates.password;
+    // Update fields if provided
+    if (updates.email !== undefined) user.email = updates.email;
+    if (updates.name !== undefined) user.name = updates.name;
+    if (updates.password !== undefined) user.password = updates.password;
+    if (updates.avatarUrl !== undefined) user.avatarUrl = updates.avatarUrl;
     
-    await saveUser(user);
+    users[index] = user;
     
-    // Update session if this is the logged-in user
+    // Save to main users storage
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(users.map(u => u.toJSON())));
+    
+    // Update session if this is the logged in user
     const currentUser = await getLoggedInUser();
     if (currentUser && currentUser.id === userId) {
         await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
