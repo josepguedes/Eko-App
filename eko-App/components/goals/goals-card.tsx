@@ -9,18 +9,32 @@ interface GoalCardProps {
   unit?: string;
   completed?: boolean;
   onLongPress?: () => void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onPress?: () => void;
 }
 
-export default function GoalCard({ title, current, target, unit = 'pts', completed = false, onLongPress }: GoalCardProps) {
+export default function GoalCard({ title, current, target, unit = 'pts', completed = false, onLongPress, selectionMode = false, isSelected = false, onPress }: GoalCardProps) {
   const progress = (current / target) * 100;
 
   return (
     <TouchableOpacity 
       style={[styles.goalCard, completed && styles.completedGoalCard]}
       onLongPress={onLongPress}
+      onPress={selectionMode ? onPress : undefined}
       activeOpacity={0.7}
+      disabled={selectionMode ? false : true}
     >
       <View style={styles.header}>
+        {selectionMode && (
+          <View style={styles.checkboxContainer}>
+            <Ionicons 
+              name={isSelected ? "checkbox" : "square-outline"} 
+              size={24} 
+              color={isSelected ? "#5ca990" : "#666"} 
+            />
+          </View>
+        )}
         <Text style={styles.goalTitle}>{title}</Text>
         {completed && (
           <Ionicons name="checkmark-circle" size={24} color="#5ca990" />
@@ -61,6 +75,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  checkboxContainer: {
+    marginRight: 12,
   },
   goalTitle: {
     color: '#fff',

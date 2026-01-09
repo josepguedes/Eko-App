@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import React, { useState, useMemo, useCallback } from "react";
 import { useRouter, useFocusEffect, Redirect, useLocalSearchParams } from "expo-router";
@@ -63,6 +64,25 @@ export default function Groups() {
     { key: "joined", label: "Your Groups" },
     { key: "goals", label: "Goals" },
   ];
+
+  // Cache de tasks para evitar múltiplas chamadas de getTaskById
+  const taskCache = useMemo(() => {
+    const cache = new Map();
+    userGoals.forEach(goal => {
+      const task = getTaskById(goal.taskId);
+      if (task) cache.set(goal.taskId, task);
+    });
+    return cache;
+  }, [userGoals]);
+
+  const groupTaskCache = useMemo(() => {
+    const cache = new Map();
+    groupGoals.forEach(goal => {
+      const task = getGroupTaskById(goal.taskId);
+      if (task) cache.set(goal.taskId, task);
+    });
+    return cache;
+  }, [groupGoals]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -140,7 +160,7 @@ export default function Groups() {
       // Show notification and redirect to group page
       const joinedGroup = await getGroupById(groupId);
       if (joinedGroup) {
-        showNotification('success', `🎉 Successfully joined ${joinedGroup.name}!`);
+        showNotification('success', `Successfully joined ${joinedGroup.name}!`);
         setTimeout(() => {
           router.push(`/group-page?id=${groupId}` as any);
         }, 1500);
@@ -172,7 +192,7 @@ export default function Groups() {
       setLeaveModalVisible(false);
       setSelectedGroup(null);
       await loadData();
-      showNotification('success', `👋 Successfully left ${groupName}`);
+      showNotification('success', `Successfully left ${groupName}`);
     } catch (error) {
       console.error('Error leaving group:', error);
       if (error instanceof Error) {
@@ -200,7 +220,7 @@ export default function Groups() {
       setDeleteGoalModalVisible(false);
       setSelectedGoal(null);
       await loadData();
-      showNotification('success', `🗑️ Successfully deleted goal: ${task?.title || 'Goal'}`);
+      showNotification('success', `Successfully deleted goal: ${task?.title || 'Goal'}`);
     } catch (error) {
       console.error('Error deleting goal:', error);
       if (error instanceof Error) {
@@ -310,7 +330,7 @@ export default function Groups() {
       await loadData();
       
       // Show notification and redirect to group page
-      showNotification('success', `🎉 Successfully joined ${groupName}!`);
+      showNotification('success', `Successfully joined ${groupName}!`);
       setTimeout(() => {
         router.push(`/group-page?id=${groupId}` as any);
       }, 1500);
@@ -348,7 +368,7 @@ export default function Groups() {
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { outlineStyle: 'none' } as any]}
               placeholder="Search groups..."
               placeholderTextColor="#666"
               value={searchQuery}
@@ -488,7 +508,7 @@ export default function Groups() {
                   </View>
                 ) : (
                   activeGoals.map((goal) => {
-                    const task = getTaskById(goal.taskId);
+                    const task = taskCache.get(goal.taskId);
                     if (!task) return null;
 
                     return (
@@ -496,17 +516,9 @@ export default function Groups() {
                         key={goal.id}
                         onPress={() => selectionMode && toggleItemSelection(goal.id)}
                         onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
-                        style={[styles.cardWrapper, selectedItems.has(goal.id) && styles.cardWrapperSelected]}
+                        style={selectedItems.has(goal.id) && styles.cardWrapperSelected}
+                        disabled={!selectionMode}
                       >
-                        {selectionMode && (
-                          <View style={styles.checkbox}>
-                            <Ionicons 
-                              name={selectedItems.has(goal.id) ? "checkbox" : "square-outline"} 
-                              size={24} 
-                              color={selectedItems.has(goal.id) ? "#5ca990" : "#666"} 
-                            />
-                          </View>
-                        )}
                         <GoalCard
                           title={task.title}
                           current={goal.current}
@@ -514,6 +526,9 @@ export default function Groups() {
                           unit={task.unit}
                           completed={false}
                           onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
+                          selectionMode={selectionMode}
+                          isSelected={selectedItems.has(goal.id)}
+                          onPress={() => toggleItemSelection(goal.id)}
                         />
                       </Pressable>
                     );
@@ -526,7 +541,7 @@ export default function Groups() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Completed Goals</Text>
                   {completedGoals.map((goal) => {
-                    const task = getTaskById(goal.taskId);
+                    const task = taskCache.get(goal.taskId);
                     if (!task) return null;
 
                     return (
@@ -556,7 +571,7 @@ export default function Groups() {
                   </View>
                 ) : (
                   activeGroupGoals.map((goal) => {
-                    const task = getGroupTaskById(goal.taskId);
+                    const task = groupTaskCache.get(goal.taskId);
                     const group = joinedGroups.find(g => g.id === goal.groupId);
                     if (!task || !group) return null;
                     
@@ -591,7 +606,7 @@ export default function Groups() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Completed Group Goals</Text>
                   {completedGroupGoals.map((goal) => {
-                    const task = getGroupTaskById(goal.taskId);
+                    const task = groupTaskCache.get(goal.taskId);
                     const group = joinedGroups.find(g => g.id === goal.groupId);
                     if (!task || !group) return null;
                     
@@ -635,7 +650,7 @@ export default function Groups() {
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { outlineStyle: 'none' } as any]}
             placeholder="Search groups..."
             placeholderTextColor="#666"
             value={searchQuery}
@@ -664,7 +679,8 @@ export default function Groups() {
                   name={group.name}
                   members={group.members.length}
                   image={getGroupImageSource(group.bannerImage)}
-                  onJoin={() => handleJoinGroup(group.id)}
+                  onJoin={() => handleShowJoinModal(group)}
+                  group={group}
                 />
               ))}
             </ScrollView>
@@ -709,19 +725,20 @@ export default function Groups() {
   };
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#5ca990"
-            colors={['#5ca990']}
-          />
-        }
-      >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0e0d' }} edges={['top']}>
+      <GestureHandlerRootView style={styles.container}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#5ca990"
+              colors={['#5ca990']}
+            />
+          }
+        >
         <TabSelector
           selectedTab={selectedTab}
           onSelectTab={setSelectedTab}
@@ -834,7 +851,8 @@ export default function Groups() {
           </Pressable>
         </Pressable>
       </Modal>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </SafeAreaView>
   );
 }
 
@@ -1068,20 +1086,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  cardWrapper: {
-    position: 'relative',
-    marginBottom: 12,
-  },
   cardWrapperSelected: {
     opacity: 0.7,
-  },
-  checkbox: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 6,
-    padding: 4,
   },
 });
