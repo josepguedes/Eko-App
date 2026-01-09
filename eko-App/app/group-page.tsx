@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {View,Text,StyleSheet,Image,TouchableOpacity,ScrollView,ActivityIndicator,Modal,Pressable,TextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -401,7 +401,7 @@ export default function GroupDetails() {
 
   const isCreator = group.createdBy === userId;
 
-  const renderTabContent = useMemo(() => {
+  const renderTabContent = () => {
     switch (selectedTab) {
       case "chat":
         return (
@@ -438,7 +438,7 @@ export default function GroupDetails() {
       default:
         return null;
     }
-  }, [selectedTab, messages, userId, messageText, groupGoals, isCreator, group, statistics, groupMembers]);
+  };
 
   return (
     <View style={styles.container}>
@@ -558,7 +558,7 @@ export default function GroupDetails() {
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderTabContent}
+        {renderTabContent()}
       </ScrollView>
 
       {/* Modal - Leave Group */}
