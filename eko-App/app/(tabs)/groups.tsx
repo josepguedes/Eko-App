@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import React, { useState, useMemo, useCallback } from "react";
 import { useRouter, useFocusEffect, Redirect, useLocalSearchParams } from "expo-router";
@@ -348,7 +349,7 @@ export default function Groups() {
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { outlineStyle: 'none' } as any]}
               placeholder="Search groups..."
               placeholderTextColor="#666"
               value={searchQuery}
@@ -496,17 +497,9 @@ export default function Groups() {
                         key={goal.id}
                         onPress={() => selectionMode && toggleItemSelection(goal.id)}
                         onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
-                        style={[styles.cardWrapper, selectedItems.has(goal.id) && styles.cardWrapperSelected]}
+                        style={selectedItems.has(goal.id) && styles.cardWrapperSelected}
+                        disabled={!selectionMode}
                       >
-                        {selectionMode && (
-                          <View style={styles.checkbox}>
-                            <Ionicons 
-                              name={selectedItems.has(goal.id) ? "checkbox" : "square-outline"} 
-                              size={24} 
-                              color={selectedItems.has(goal.id) ? "#5ca990" : "#666"} 
-                            />
-                          </View>
-                        )}
                         <GoalCard
                           title={task.title}
                           current={goal.current}
@@ -514,6 +507,9 @@ export default function Groups() {
                           unit={task.unit}
                           completed={false}
                           onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
+                          selectionMode={selectionMode}
+                          isSelected={selectedItems.has(goal.id)}
+                          onPress={() => toggleItemSelection(goal.id)}
                         />
                       </Pressable>
                     );
@@ -635,7 +631,7 @@ export default function Groups() {
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { outlineStyle: 'none' } as any]}
             placeholder="Search groups..."
             placeholderTextColor="#666"
             value={searchQuery}
@@ -664,7 +660,8 @@ export default function Groups() {
                   name={group.name}
                   members={group.members.length}
                   image={getGroupImageSource(group.bannerImage)}
-                  onJoin={() => handleJoinGroup(group.id)}
+                  onJoin={() => handleShowJoinModal(group)}
+                  group={group}
                 />
               ))}
             </ScrollView>
@@ -709,19 +706,20 @@ export default function Groups() {
   };
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#5ca990"
-            colors={['#5ca990']}
-          />
-        }
-      >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0e0d' }} edges={['top']}>
+      <GestureHandlerRootView style={styles.container}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#5ca990"
+              colors={['#5ca990']}
+            />
+          }
+        >
         <TabSelector
           selectedTab={selectedTab}
           onSelectTab={setSelectedTab}
@@ -834,7 +832,8 @@ export default function Groups() {
           </Pressable>
         </Pressable>
       </Modal>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </SafeAreaView>
   );
 }
 
@@ -1068,20 +1067,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  cardWrapper: {
-    position: 'relative',
-    marginBottom: 12,
-  },
   cardWrapperSelected: {
     opacity: 0.7,
-  },
-  checkbox: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 6,
-    padding: 4,
   },
 });
