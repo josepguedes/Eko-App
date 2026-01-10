@@ -1,4 +1,5 @@
 import { View, StyleSheet, ScrollView } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import Dropdown from '@/components/mainPage/dropdown'
 import React from 'react'
 import IntroBox from '@/components/mainPage/introBox'
@@ -32,6 +33,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    marginTop: 24,
+    paddingTop: 12,
   },
 })

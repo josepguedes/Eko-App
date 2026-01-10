@@ -26,12 +26,21 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [timeoutId, setTimeoutId] = useState<any>(null);
 
   const showNotification = (type: NotificationType, message: string, duration: number = 5000) => {
+    // Validar mensagem
+    if (!message || message.trim() === '') {
+      console.warn('Attempted to show notification with empty message');
+      return;
+    }
+    
+    console.log('NotificationContext: showNotification called with:', { type, message, duration });
+    
     // Limpar timeout anterior se existir
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
     setNotification({ visible: true, type, message });
+    console.log('NotificationContext: notification state updated');
 
     // Auto-hide após o duration
     const newTimeoutId = setTimeout(() => {

@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     overflow: 'hidden',
     height: Platform.OS === 'ios' ? 88 : 72,
+    marginBottom: Platform.OS === 'android' ? 8 : 0,
   },
   view2FlexBox: {
     justifyContent: 'center',

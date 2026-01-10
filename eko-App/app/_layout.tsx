@@ -28,6 +28,8 @@ export default function RootLayout() {
           <Stack.Screen name="group-page" options={{ headerShown: false }} />
           <Stack.Screen name="create-goals" options={{ headerShown: false }} />
           <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+          <Stack.Screen name="terms" options={{ headerShown: false }} />
+          <Stack.Screen name="support" options={{ headerShown: false }} />
         </Stack>
         <GlobalNotification />
         <StatusBar style="auto" />
