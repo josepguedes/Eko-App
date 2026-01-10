@@ -20,7 +20,7 @@ export default function index() {
         <View style={{ marginTop: 24}}>
           <MyLastTrip />
         </View>
-        <View style={{ marginTop: 24 }}></View>
+        <View style={{ marginTop: 24}}></View>
           <ActivitySummary />
         </View>
     </ScrollView>

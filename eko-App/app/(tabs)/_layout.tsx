@@ -206,7 +206,6 @@ const styles = StyleSheet.create({
   },
   time2: {
     color: '#5ca990',
-    fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 24,
     fontSize: 14,
