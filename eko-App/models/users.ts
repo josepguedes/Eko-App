@@ -11,8 +11,9 @@ export class User {
     groups: string[];
     isLoggedIn: boolean = false;
     avatarUrl?: string;
+    selectedCarId?: string;
 
-    constructor(id: string, email: string, name: string, password: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false, avatarUrl?: string) {
+    constructor(id: string, email: string, name: string, password: string, createdAt: Date = new Date(), cars: string[] = [] , goals: string[] = [], groups: string[] = [], isLoggedIn: boolean = false, avatarUrl?: string, selectedCarId?: string) {
         if (!id || !email || !name || !password) {
             throw new Error('ID, email, nome e password são obrigatórios');
         }
@@ -26,6 +27,7 @@ export class User {
         this.groups = groups;
         this.isLoggedIn = isLoggedIn;
         this.avatarUrl = avatarUrl;
+        this.selectedCarId = selectedCarId;
     }
 
     toJSON() {
@@ -39,7 +41,8 @@ export class User {
             goals: this.goals,
             groups: this.groups,
             isLoggedIn: this.isLoggedIn,
-            avatarUrl: this.avatarUrl
+            avatarUrl: this.avatarUrl,
+            selectedCarId: this.selectedCarId
         };
     }
 
@@ -54,7 +57,8 @@ export class User {
             json.goals || [],
             json.groups || [],
             json.isLoggedIn || false,
-            json.avatarUrl
+            json.avatarUrl,
+            json.selectedCarId
         );
     }
 
@@ -383,4 +387,66 @@ export async function removeGoalFromUser(userId: string, goalId: string): Promis
     if (currentUser && currentUser.id === userId) {
         await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
     }
+}
+
+export async function addCarToUser(userId: string, carId: string): Promise<void> {
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error('Utilizador não encontrado');
+    }
+    if (!user.cars.includes(carId)) {
+        user.cars.push(carId);
+        await saveUser(user);
+        
+        const currentUser = await getLoggedInUser();
+        if (currentUser && currentUser.id === userId) {
+            await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
+        }
+    }
+}
+
+export async function removeCarFromUser(userId: string, carId: string): Promise<void> {
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error('Utilizador não encontrado');
+    }
+    user.cars = user.cars.filter(id => id !== carId);
+    
+    // If removing the selected car, clear selection
+    if (user.selectedCarId === carId) {
+        user.selectedCarId = undefined;
+    }
+    
+    await saveUser(user);
+    
+    const currentUser = await getLoggedInUser();
+    if (currentUser && currentUser.id === userId) {
+        await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
+    }
+}
+
+export async function setSelectedCar(userId: string, carId: string): Promise<void> {
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error('Utilizador não encontrado');
+    }
+    
+    // Check if the car belongs to the user
+    if (!user.cars.includes(carId)) {
+        throw new Error('Este carro não pertence ao utilizador');
+    }
+    
+    user.selectedCarId = carId;
+    await saveUser(user);
+    
+    // Update session
+    const currentUser = await getLoggedInUser();
+    if (currentUser && currentUser.id === userId) {
+        await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(user.toJSON()));
+    }
+}
+
+export async function getSelectedCar(userId: string): Promise<string | undefined> {
+    const user = await getUserById(userId);
+    return user?.selectedCarId;
 }

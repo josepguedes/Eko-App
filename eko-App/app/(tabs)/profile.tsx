@@ -79,6 +79,10 @@ export default function ProfileScreen() {
     console.log('Navigate to units settings');
   };
 
+  const handleMyCars = () => {
+    router.push('/mycars');
+  };
+
   const handleTerms = () => {
     router.push('/terms');
   };
@@ -144,6 +148,13 @@ export default function ProfileScreen() {
             label="Units"
             type="navigation"
             onPress={handleUnits}
+            showDivider
+          />
+          <SettingsItem
+            icon="car-outline"
+            label="My Cars"
+            type="navigation"
+            onPress={handleMyCars}
             showDivider
           />
           <SettingsItem

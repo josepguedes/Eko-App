@@ -231,13 +231,13 @@ export default function MyGoals({
 
 const styles = StyleSheet.create({
   container: {
-    width: 368,
+    marginHorizontal: 16,
     backgroundColor: "transparent",
   },
   card: {
     width: "100%",
     backgroundColor: "rgba(26, 26, 26, 0.85)",
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 0.5,
     borderColor: "rgba(214, 214, 214, 0.2)",
     overflow: "hidden",

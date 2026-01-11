@@ -61,16 +61,14 @@ export default function ActivitySummary() {
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
-    alignItems: "center",
-    paddingHorizontal: 8,
+    marginHorizontal: 16,
   },
   card: {
-    width: "90%",
-    maxWidth: 520,
+    width: "100%",
     backgroundColor: "rgba(26, 26, 26, 0.85)",
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: "rgba(214, 214, 214, 0.2)",
     padding: 28,
     gap: 24,
     shadowColor: "#000",

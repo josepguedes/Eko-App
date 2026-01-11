@@ -23,10 +23,89 @@ export interface Viagem {
     route?: LocationCoords[];
     aggressiveEvents?: AggressiveEvent[];
     duration?: number; // em segundos
+    carId?: string; // ID do carro usado
+    fuelType?: 'gasoline' | 'diesel' | 'electric' | 'hybrid';
+    fuelConsumed?: number; // litros ou kWh
+    fuelCost?: number; // custo em euros
+    co2Emissions?: number; // kg de CO2
+    avgConsumption?: number; // L/100km ou kWh/100km
 }
 
 const STORAGE_KEY = '@viagens_eco';
 const AGGRESSIVE_THRESHOLD = 15; // km/h difference threshold
+
+// Fuel consumption constants (average L/100km or kWh/100km)
+const BASE_CONSUMPTION = {
+    gasoline: 7.5,  // L/100km
+    diesel: 6.5,    // L/100km
+    electric: 18,   // kWh/100km
+    hybrid: 5.0     // L/100km
+};
+
+// Fuel prices in Portugal (€/L or €/kWh)
+const FUEL_PRICES = {
+    gasoline: 1.85,  // €/L
+    diesel: 1.65,    // €/L
+    electric: 0.25,  // €/kWh
+    hybrid: 1.75     // €/L
+};
+
+// CO2 emissions (kg CO2 per L or kWh)
+const CO2_EMISSIONS = {
+    gasoline: 2.31,  // kg CO2 per liter
+    diesel: 2.68,    // kg CO2 per liter
+    electric: 0.0,   // kg CO2 (assuming renewable energy)
+    hybrid: 1.5      // kg CO2 per liter (average)
+};
+
+// Calculate fuel consumption based on distance, fuel type, and driving behavior
+export function calculateFuelConsumption(
+    distance: number,
+    fuelType: 'gasoline' | 'diesel' | 'electric' | 'hybrid',
+    ecoScore: number,
+    aggressiveEvents: number
+): { fuelConsumed: number; avgConsumption: number; fuelCost: number; co2Emissions: number } {
+    if (distance === 0) {
+        return { fuelConsumed: 0, avgConsumption: 0, fuelCost: 0, co2Emissions: 0 };
+    }
+
+    // Base consumption for fuel type
+    let consumption = BASE_CONSUMPTION[fuelType];
+
+    // Adjust consumption based on eco score (lower score = higher consumption)
+    const ecoFactor = 1 + ((100 - ecoScore) / 100) * 0.3; // Up to 30% increase
+    consumption *= ecoFactor;
+
+    // Additional penalty for aggressive events
+    const aggressivePenalty = Math.min(aggressiveEvents * 0.02, 0.2); // Up to 20% increase
+    consumption *= (1 + aggressivePenalty);
+
+    // Calculate total fuel consumed
+    const fuelConsumed = (consumption * distance) / 100;
+
+    // Calculate cost
+    const fuelCost = fuelConsumed * FUEL_PRICES[fuelType];
+
+    // Calculate CO2 emissions
+    const co2Emissions = fuelType === 'electric' ? 0 : fuelConsumed * CO2_EMISSIONS[fuelType];
+
+    return {
+        fuelConsumed: parseFloat(fuelConsumed.toFixed(2)),
+        avgConsumption: parseFloat(consumption.toFixed(2)),
+        fuelCost: parseFloat(fuelCost.toFixed(2)),
+        co2Emissions: parseFloat(co2Emissions.toFixed(2))
+    };
+}
+
+// Get fuel unit based on type
+export function getFuelUnit(fuelType: 'gasoline' | 'diesel' | 'electric' | 'hybrid'): string {
+    return fuelType === 'electric' ? 'kWh' : 'L';
+}
+
+// Get consumption unit based on type
+export function getConsumptionUnit(fuelType: 'gasoline' | 'diesel' | 'electric' | 'hybrid'): string {
+    return fuelType === 'electric' ? 'kWh/100km' : 'L/100km';
+}
 
 export class TripManager {
     private route: LocationCoords[] = [];
