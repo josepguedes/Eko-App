@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface GoalCardProps {
   title: string;
+  description?: string;
   current: number;
   target: number;
   unit?: string;
@@ -14,8 +15,13 @@ interface GoalCardProps {
   onPress?: () => void;
 }
 
-export default function GoalCard({ title, current, target, unit = 'pts', completed = false, onLongPress, selectionMode = false, isSelected = false, onPress }: GoalCardProps) {
+export default function GoalCard({ title, description, current, target, unit = 'pts', completed = false, onLongPress, selectionMode = false, isSelected = false, onPress }: GoalCardProps) {
   const progress = (current / target) * 100;
+  
+  // Format numbers to max 2 decimal places
+  const formatNumber = (num: number): string => {
+    return Number.isInteger(num) ? num.toString() : num.toFixed(2);
+  };
 
   return (
     <TouchableOpacity 
@@ -41,6 +47,10 @@ export default function GoalCard({ title, current, target, unit = 'pts', complet
         )}
       </View>
       
+      {description && (
+        <Text style={styles.goalDescription}>{description}</Text>
+      )}
+      
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
           <View 
@@ -52,7 +62,7 @@ export default function GoalCard({ title, current, target, unit = 'pts', complet
             ]} 
           />
         </View>
-        <Text style={styles.progressText}>{current}/{target}{unit}</Text>
+        <Text style={styles.progressText}>{formatNumber(current)}/{formatNumber(target)}{unit}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -84,6 +94,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
+  },
+  goalDescription: {
+    color: '#9BA1A6',
+    fontSize: 13,
+    marginBottom: 12,
+    marginTop: -6,
   },
   progressContainer: {
     flexDirection: 'row',

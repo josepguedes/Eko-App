@@ -150,11 +150,23 @@ export async function initializeDefaultGroups(): Promise<void> {
     // Guardar diretamente no storage
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(defaultGroups.map(g => g.toJSON())));
 
+    // ✅ IMPORTANTE: Atualizar o array groups de cada user com os grupos que ele pertence
+    const { addGroupToUser } = await import('./users');
+    
+    for (const group of defaultGroups) {
+        for (const memberId of group.members) {
+            try {
+                await addGroupToUser(memberId, group.id);
+                console.log(`✅ User ${memberId} adicionado ao grupo ${group.name}`);
+            } catch (error) {
+                console.error(`Erro ao adicionar user ${memberId} ao grupo ${group.name}:`, error);
+            }
+        }
+    }
+
     // Verificar se foram guardados
     const savedGroups = await getAllGroups();
-    // console.log('6 grupos pré-definidos criados!');
-    // console.log('Grupos guardados:', savedGroups.length);
-    // console.log('Nomes dos grupos:', savedGroups.map(g => g.name));
+    console.log('6 grupos pré-definidos criados e users sincronizados!');
 }
 
 export async function saveGroup(group: Group): Promise<void> {

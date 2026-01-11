@@ -1,10 +1,11 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InputCustom from '@/components/inputs';
 import BotaoCustom from '@/components/buttons';
 import CheckboxProps from '@/components/checkBox';
 import { registerUser, loginUser } from '@/models/users';
+import { initializeAppData } from '@/models/initialization';
 
 export default function Register() {
     const router = useRouter();
@@ -13,6 +14,13 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [user, setUser] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+
+    // Initialize app data when component mounts
+    useEffect(() => {
+        initializeAppData().catch(error => {
+            console.error('Failed to initialize app data:', error);
+        });
+    }, []);
 
     const handleRegister = async () => {
         console.log('=== INÍCIO DO REGISTO ===');

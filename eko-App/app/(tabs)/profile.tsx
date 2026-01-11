@@ -1,9 +1,10 @@
 // Profile settings screen matching Figma design with user card, stats, and settings sections
 
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import UserCard from '@/components/profile/user-card';
 import StatsRow from '@/components/profile/stats-row';
@@ -12,9 +13,11 @@ import SettingsSection from '@/components/profile/settings-section';
 import { getLoggedInUser, logoutUser, User } from '@/models/users';
 import { getUserGoals } from '@/models/goals';
 import { useFocusEffect } from '@react-navigation/native';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { showNotification } = useNotification();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -89,6 +92,33 @@ export default function ProfileScreen() {
 
   const handleSupport = () => {
     router.push('/support');
+  };
+
+  const handleClearStorage = () => {
+    Alert.alert(
+      'Clear Storage',
+      'This will delete ALL app data (users, trips, goals, cars). This action cannot be undone. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.clear();
+              showNotification('success', 'Storage cleared successfully!');
+              // Redirect to login after clearing
+              setTimeout(() => {
+                router.replace('/login');
+              }, 1500);
+            } catch (error) {
+              showNotification('critical', 'Failed to clear storage');
+              console.error('Error clearing storage:', error);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -180,6 +210,13 @@ export default function ProfileScreen() {
             label="Logout"
             type="action"
             onPress={handleLogout}
+            showDivider
+          />
+          <SettingsItem
+            icon="trash-outline"
+            label="Clear Storage (DEBUG)"
+            type="action"
+            onPress={handleClearStorage}
             showDivider={false}
           />
         </SettingsSection>

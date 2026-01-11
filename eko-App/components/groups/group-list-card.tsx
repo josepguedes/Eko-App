@@ -8,16 +8,30 @@ interface GroupListCardProps {
   image: ImageSourcePropType;
   onPress?: () => void;
   onLongPress?: () => void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
 }
 
-export default function GroupListCard({ name, members, image, onPress, onLongPress }: GroupListCardProps) {
+export default function GroupListCard({ name, members, image, onPress, onLongPress, selectionMode, isSelected }: GroupListCardProps) {
   return (
     <TouchableOpacity 
-      style={styles.groupCard} 
+      style={[
+        styles.groupCard,
+        selectionMode && isSelected && styles.groupCardSelected
+      ]} 
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={500}
     >
+      {selectionMode && (
+        <View style={styles.checkboxContainer}>
+          <Ionicons 
+            name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
+            size={24} 
+            color={isSelected ? "#5ca990" : "#666"} 
+          />
+        </View>
+      )}
       <Image source={image} style={styles.groupImage} />
       <View style={styles.groupInfo}>
         <Text style={styles.groupName}>{name}</Text>
@@ -26,7 +40,9 @@ export default function GroupListCard({ name, members, image, onPress, onLongPre
           <Text style={styles.membersText}>{members} members</Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#5ca990" />
+      {!selectionMode && (
+        <Ionicons name="chevron-forward" size={24} color="#5ca990" />
+      )}
     </TouchableOpacity>
   );
 }
@@ -41,6 +57,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#fff',
+  },
+  groupCardSelected: {
+    borderColor: '#5ca990',
+    borderWidth: 2,
+    backgroundColor: 'rgba(92, 169, 144, 0.1)',
+  },
+  checkboxContainer: {
+    marginRight: 12,
   },
   groupImage: {
     width: 60,
