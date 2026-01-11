@@ -105,15 +105,14 @@ export default function MyLastTrip() {
 
 const styles = StyleSheet.create({
     container: {
-        width: "100%",
-        alignItems: "center",
-        paddingHorizontal: 8,
+        marginHorizontal: 16,
     },
     card: {
         width: "100%",
-        maxWidth: 520,
         backgroundColor: "rgba(26, 26, 26, 0.85)",
-        borderRadius: 20,
+        borderRadius: 16,
+        borderWidth: 0.5,
+        borderColor: "rgba(214, 214, 214, 0.2)",
         padding: 28,
         gap: 28,
     },

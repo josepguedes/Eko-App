@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, Animated } from 'react-native';
-import { TripManager, LocationCoords, AggressiveEvent } from '../../models/trip';
+import { TripManager, LocationCoords, AggressiveEvent, calculateFuelConsumption, getFuelUnit, getConsumptionUnit } from '../../models/trip';
 import savetrip from '../../models/trip';
 import { Colors } from '../../constants/colors';
+import { getLoggedInUser } from '@/models/users';
+import { getCarById } from '@/models/cars';
 
 // Conditional imports for native platforms only
 let MapView: any;
@@ -37,6 +39,14 @@ export default function RecordScreen() {
     longitude: -8.6291,
     latitudeDelta: 0.005,
     longitudeDelta: 0.005,
+  });
+  const [selectedCarId, setSelectedCarId] = useState<string | undefined>(undefined);
+  const [fuelType, setFuelType] = useState<'gasoline' | 'diesel' | 'electric' | 'hybrid'>('gasoline');
+  const [fuelStats, setFuelStats] = useState({
+    fuelConsumed: 0,
+    avgConsumption: 0,
+    fuelCost: 0,
+    co2Emissions: 0
   });
 
   const mapRef = useRef<any>(null);
@@ -108,6 +118,11 @@ export default function RecordScreen() {
       durationInterval.current = null;
     }
 
+    // Calculate final fuel stats
+    const ecoScore = getCurrentEcoScore();
+    const finalStats = calculateFuelConsumption(distance, fuelType, ecoScore, aggressiveMarkers.length);
+    setFuelStats(finalStats);
+
     // Get final trip data (already stored in state)
     // Dashboard will automatically show the summary view
   };
@@ -121,6 +136,7 @@ export default function RecordScreen() {
     setMaxSpeed(0);
     setDuration(0);
     velocidadeAnimada.setValue(0);
+    setFuelStats({ fuelConsumed: 0, avgConsumption: 0, fuelCost: 0, co2Emissions: 0 });
     
     if (durationInterval.current) {
       clearInterval(durationInterval.current);
@@ -129,6 +145,23 @@ export default function RecordScreen() {
   };
 
   useEffect(() => {
+    // Load selected car
+    const loadSelectedCar = async () => {
+      try {
+        const user = await getLoggedInUser();
+        if (user?.selectedCarId) {
+          const car = await getCarById(user.selectedCarId);
+          if (car) {
+            setSelectedCarId(car.id);
+            setFuelType(car.fuelType);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading selected car:', error);
+      }
+    };
+    loadSelectedCar();
+
     // Only run on native platforms
     if (Platform.OS === 'web') {
       return;
@@ -153,6 +186,15 @@ export default function RecordScreen() {
       }
     };
   }, []);
+
+  // Update fuel statistics when distance or events change
+  useEffect(() => {
+    if (distance > 0) {
+      const ecoScore = getCurrentEcoScore();
+      const stats = calculateFuelConsumption(distance, fuelType, ecoScore, aggressiveMarkers.length);
+      setFuelStats(stats);
+    }
+  }, [distance, aggressiveMarkers, fuelType]);
 
   // Format duration as HH:MM:SS
   const formatDuration = (seconds: number): string => {
@@ -324,6 +366,49 @@ export default function RecordScreen() {
                 </View>
               </View>
 
+              {/* Fuel Stats Section */}
+              {fuelStats.fuelConsumed > 0 && (
+                <View style={styles.fuelStatsSection}>
+                  <Text style={styles.fuelStatsTitle}>📊 Estatísticas de Consumo</Text>
+                  
+                  <View style={styles.fuelStatsGrid}>
+                    <View style={styles.fuelStatCard}>
+                      <Text style={styles.fuelStatLabel}>CONSUMO</Text>
+                      <Text style={styles.fuelStatValue}>
+                        {fuelStats.avgConsumption.toFixed(1)}
+                      </Text>
+                      <Text style={styles.fuelStatUnit}>{getConsumptionUnit(fuelType)}</Text>
+                    </View>
+
+                    <View style={styles.fuelStatCard}>
+                      <Text style={styles.fuelStatLabel}>TOTAL USADO</Text>
+                      <Text style={styles.fuelStatValue}>
+                        {fuelStats.fuelConsumed.toFixed(2)}
+                      </Text>
+                      <Text style={styles.fuelStatUnit}>{getFuelUnit(fuelType)}</Text>
+                    </View>
+
+                    <View style={styles.fuelStatCard}>
+                      <Text style={styles.fuelStatLabel}>CUSTO</Text>
+                      <Text style={[styles.fuelStatValue, { color: '#FFB74D' }]}>
+                        {fuelStats.fuelCost.toFixed(2)}
+                      </Text>
+                      <Text style={styles.fuelStatUnit}>€</Text>
+                    </View>
+
+                    {fuelType !== 'electric' && (
+                      <View style={styles.fuelStatCard}>
+                        <Text style={styles.fuelStatLabel}>CO₂</Text>
+                        <Text style={[styles.fuelStatValue, { color: '#EF5350' }]}>
+                          {fuelStats.co2Emissions.toFixed(2)}
+                        </Text>
+                        <Text style={styles.fuelStatUnit}>kg</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
               {/* Events Summary */}
               {aggressiveMarkers.length > 0 && (
                 <View style={styles.eventsCard}>
@@ -337,7 +422,18 @@ export default function RecordScreen() {
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.saveButton} onPress={async () => {
                   try {
-                    await savetrip(tripManager.getTrip());
+                    const trip = tripManager.getTrip();
+                    // Add car and fuel data to trip
+                    const tripWithFuel = {
+                      ...trip,
+                      carId: selectedCarId,
+                      fuelType: fuelType,
+                      fuelConsumed: fuelStats.fuelConsumed,
+                      fuelCost: fuelStats.fuelCost,
+                      co2Emissions: fuelStats.co2Emissions,
+                      avgConsumption: fuelStats.avgConsumption
+                    };
+                    await savetrip(tripWithFuel);
                     Alert.alert('Sucesso', 'Viagem guardada com sucesso!');
                     resetTrip();
                   } catch (error) {
@@ -603,6 +699,54 @@ const styles = StyleSheet.create({
     color: '#ff8a80',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  fuelStatsSection: {
+    backgroundColor: 'rgba(92, 169, 144, 0.1)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(92, 169, 144, 0.3)',
+  },
+  fuelStatsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ECEDEE',
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  fuelStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  fuelStatCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(92, 169, 144, 0.2)',
+  },
+  fuelStatLabel: {
+    fontSize: 9,
+    color: '#9BA1A6',
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: 0.8,
+  },
+  fuelStatValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#5ca990',
+  },
+  fuelStatUnit: {
+    fontSize: 9,
+    color: '#9BA1A6',
+    fontWeight: '500',
+    marginTop: 2,
   },
   buttonContainer: {
     flexDirection: 'row',

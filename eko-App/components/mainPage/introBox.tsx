@@ -28,7 +28,7 @@ export default function IntroBox() {
 
 const styles = StyleSheet.create({
     container: {
-        width: 357,
+        marginHorizontal: 16,
         height: 139,
         borderRadius: 16,
         overflow: 'hidden',
@@ -36,8 +36,8 @@ const styles = StyleSheet.create({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#fff',
+        borderWidth: 0.5,
+        borderColor: 'rgba(214, 214, 214, 0.2)',
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
