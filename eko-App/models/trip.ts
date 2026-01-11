@@ -307,7 +307,7 @@ export class TripManager {
 }
 
 // Save trip to storage
-export default function savetrip(trip: Viagem): Promise<void> {
+export default async function savetrip(trip: Viagem, userId?: string): Promise<void> {
     console.log('=== GUARDAR VIAGEM ===');
     console.log('ID:', trip.id);
     console.log('Data:', trip.data);
@@ -320,14 +320,50 @@ export default function savetrip(trip: Viagem): Promise<void> {
     console.log('Eventos Agressivos:', trip.aggressiveEvents?.length || 0);
     console.log('======================');
 
-    return AsyncStorage.getItem('trips').then((data) => {
-        let trips: Viagem[] = [];
-        if (data) {
-            trips = JSON.parse(data);
+    const data = await AsyncStorage.getItem('trips');
+    let trips: Viagem[] = [];
+    if (data) {
+        trips = JSON.parse(data);
+    }
+    trips.push(trip);
+    await AsyncStorage.setItem('trips', JSON.stringify(trips));
+
+    // ✅ AUTO-UPDATE GOALS AFTER TRIP
+    if (userId) {
+        console.log('🎯 Atualizando goals para user:', userId);
+        
+        // Import goal update functions dynamically to avoid circular dependencies
+        const { updateGoalsAfterTrip } = await import('./goals');
+        const { updateGroupGoalsAfterTrip } = await import('./groupGoals');
+        const { getUserById } = await import('./users');
+        
+        // Update personal goals
+        await updateGoalsAfterTrip(userId, {
+            distanciaKm: trip.distanciaKm,
+            ecoScore: trip.ecoScore,
+            velocidadeMedia: trip.velocidadeMedia,
+            eventosBruscos: trip.eventosBruscos,
+            co2Emissions: trip.co2Emissions,
+        });
+        
+        // Update group goals
+        const user = await getUserById(userId);
+        
+        if (user && user.groups && user.groups.length > 0) {
+            console.log('✅ Calling updateGroupGoalsAfterTrip for', user.groups.length, 'groups...');
+            await updateGroupGoalsAfterTrip(userId, user.groups, {
+                distanciaKm: trip.distanciaKm,
+                ecoScore: trip.ecoScore,
+                velocidadeMedia: trip.velocidadeMedia,
+                eventosBruscos: trip.eventosBruscos,
+                co2Emissions: trip.co2Emissions,
+            });
+        } else {
+            console.log('⚠️ User has no groups:', user?.groups?.length || 0);
         }
-        trips.push(trip);
-        return AsyncStorage.setItem('trips', JSON.stringify(trips));
-    });
+        
+        console.log('✅ Goals atualizados com sucesso!');
+    }
 }
 
 // Get all trips

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface GroupGoalCardProps {
   title: string;
+  description?: string;
   current: number;
   target: number;
   unit: string;
@@ -13,10 +14,13 @@ interface GroupGoalCardProps {
   onPress?: () => void;
   onLongPress?: () => void;
   userContribution?: number;
+  selectionMode?: boolean;
+  isSelected?: boolean;
 }
 
 export default function GroupGoalCard({
   title,
+  description,
   current,
   target,
   unit,
@@ -26,15 +30,22 @@ export default function GroupGoalCard({
   onPress,
   onLongPress,
   userContribution = 0,
+  selectionMode = false,
+  isSelected = false,
 }: GroupGoalCardProps) {
   const [isPressed, setIsPressed] = useState(false);
   const progress = Math.min((current / target) * 100, 100);
   const progressPerMember = memberCount > 0 ? current / memberCount : 0;
 
+  // Format numbers to max 2 decimal places
+  const formatNumber = (num: number): string => {
+    return Number.isInteger(num) ? num.toString() : num.toFixed(2);
+  };
+
   return (
     <TouchableOpacity
-      style={[styles.card, completed && styles.completedCard, isPressed && styles.pressedCard]}
-      onPress={onPress}
+      style={[styles.card, completed && styles.completedCard, isPressed && styles.pressedCard, selectionMode && isSelected && styles.selectedCard]}
+      onPress={selectionMode ? onPress : onPress}
       onPressIn={() => setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}
       onLongPress={onLongPress}
@@ -42,6 +53,15 @@ export default function GroupGoalCard({
       activeOpacity={0.7}
     >
       <View style={styles.header}>
+        {selectionMode && (
+          <View style={styles.checkboxContainer}>
+            <Ionicons 
+              name={isSelected ? "checkbox" : "square-outline"} 
+              size={24} 
+              color={isSelected ? "#5ca990" : "#666"} 
+            />
+          </View>
+        )}
         <View style={styles.titleContainer}>
           <View style={[styles.iconContainer, completed && styles.completedIcon]}>
             <Ionicons name={icon as any} size={20} color="#fff" />
@@ -55,12 +75,16 @@ export default function GroupGoalCard({
         )}
       </View>
 
+      {description && (
+        <Text style={styles.description}>{description}</Text>
+      )}
+
       <View style={styles.progressSection}>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
         <Text style={styles.progressText}>
-          {current.toFixed(1)} / {target} {unit}
+          {formatNumber(current)} / {formatNumber(target)} {unit}
         </Text>
       </View>
 
@@ -72,7 +96,7 @@ export default function GroupGoalCard({
         <View style={styles.statItem}>
           <Ionicons name="checkmark-circle-outline" size={16} color="#5ca990" />
           <Text style={styles.statText}>
-            Your: {userContribution.toFixed(1)} {unit}
+            Your: {formatNumber(userContribution)} {unit}
           </Text>
         </View>
         <Text style={styles.percentageText}>{progress.toFixed(0)}%</Text>
@@ -97,6 +121,14 @@ const styles = StyleSheet.create({
   pressedCard: {
     opacity: 0.7,
     transform: [{ scale: 0.98 }],
+  },
+  selectedCard: {
+    borderColor: '#5ca990',
+    borderWidth: 2,
+    backgroundColor: 'rgba(92, 169, 144, 0.1)',
+  },
+  checkboxContainer: {
+    marginRight: 12,
   },
   header: {
     flexDirection: 'row',
@@ -126,6 +158,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
+  },
+  description: {
+    fontSize: 13,
+    color: '#9BA1A6',
+    marginTop: 8,
+    marginBottom: 12,
   },
   completedBadge: {
     marginLeft: 8,

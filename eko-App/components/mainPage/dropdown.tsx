@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getLoggedInUser } from '@/models/users';
 import { getUserCars, Car, getCarById } from '@/models/cars';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 interface DropdownProps {
@@ -16,9 +17,11 @@ export default function Dropdown() {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        loadUserCar();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            loadUserCar();
+        }, [])
+    );
 
     const loadUserCar = async () => {
         try {

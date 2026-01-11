@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, Animated } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, Animated, ScrollView } from 'react-native';
 import { TripManager, LocationCoords, AggressiveEvent, calculateFuelConsumption, getFuelUnit, getConsumptionUnit } from '../../models/trip';
 import savetrip from '../../models/trip';
 import { Colors } from '../../constants/colors';
 import { getLoggedInUser } from '@/models/users';
 import { getCarById } from '@/models/cars';
+import { useNotification } from '@/contexts/NotificationContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 // Conditional imports for native platforms only
 let MapView: any;
@@ -27,6 +31,7 @@ interface Region {
 }
 
 export default function RecordScreen() {
+  const router = useRouter();
   const [velocidade, setVelocidade] = useState(0);
   const [maxSpeed, setMaxSpeed] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -41,6 +46,7 @@ export default function RecordScreen() {
     longitudeDelta: 0.005,
   });
   const [selectedCarId, setSelectedCarId] = useState<string | undefined>(undefined);
+  const [selectedCarName, setSelectedCarName] = useState<string>('No Car Selected');
   const [fuelType, setFuelType] = useState<'gasoline' | 'diesel' | 'electric' | 'hybrid'>('gasoline');
   const [fuelStats, setFuelStats] = useState({
     fuelConsumed: 0,
@@ -48,6 +54,8 @@ export default function RecordScreen() {
     fuelCost: 0,
     co2Emissions: 0
   });
+  const [activeStatsTab, setActiveStatsTab] = useState<'trip' | 'fuel'>('trip');
+  const { showNotification } = useNotification();
 
   const mapRef = useRef<any>(null);
   const tripManager = useRef(new TripManager()).current;
@@ -55,6 +63,12 @@ export default function RecordScreen() {
   const durationInterval = useRef<any>(null);
 
   const startTracking = () => {
+    // Check if car is selected
+    if (!selectedCarId) {
+      showNotification('critical', 'Please select a car before starting a trip');
+      return;
+    }
+
     setIsTracking(true);
     setDuration(0);
 
@@ -102,7 +116,7 @@ export default function RecordScreen() {
       },
       (error) => {
         console.error('Tracking error:', error);
-        Alert.alert('Erro', 'Não foi possível obter a localização');
+        showNotification('critical', 'Unable to get location');
         setIsTracking(false);
       }
     );
@@ -144,24 +158,38 @@ export default function RecordScreen() {
     }
   };
 
-  useEffect(() => {
-    // Load selected car
-    const loadSelectedCar = async () => {
-      try {
-        const user = await getLoggedInUser();
-        if (user?.selectedCarId) {
-          const car = await getCarById(user.selectedCarId);
-          if (car) {
-            setSelectedCarId(car.id);
-            setFuelType(car.fuelType);
+  // Load selected car on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadSelectedCar = async () => {
+        try {
+          const user = await getLoggedInUser();
+          if (user?.selectedCarId) {
+            const car = await getCarById(user.selectedCarId);
+            if (car) {
+              setSelectedCarId(car.id);
+              setSelectedCarName(car.model);
+              setFuelType(car.fuelType);
+              console.log('✅ Car reloaded on focus:', car.model);
+            } else {
+              setSelectedCarId(undefined);
+              setSelectedCarName('No Car Selected');
+              console.log('⚠️ Car not found');
+            }
+          } else {
+            setSelectedCarId(undefined);
+            setSelectedCarName('No Car Selected');
+            console.log('⚠️ No car selected in user');
           }
+        } catch (error) {
+          console.error('Error loading selected car:', error);
         }
-      } catch (error) {
-        console.error('Error loading selected car:', error);
-      }
-    };
-    loadSelectedCar();
+      };
+      loadSelectedCar();
+    }, [])
+  );
 
+  useEffect(() => {
     // Only run on native platforms
     if (Platform.OS === 'web') {
       return;
@@ -241,7 +269,7 @@ export default function RecordScreen() {
         style={styles.map}
         region={region}
         showsUserLocation={true}
-        showsMyLocationButton={true}
+        showsMyLocationButton={false}
         showsCompass={true}
         showsTraffic={true}
         mapType="standard"
@@ -275,6 +303,89 @@ export default function RecordScreen() {
         ))}
       </MapView>
 
+      {/* Center Map Button - Top Right before trip, Bottom Right during trip, Hidden after trip */}
+      {route.length === 0 && !isTracking ? (
+        // Before trip starts - Top Right
+        <TouchableOpacity
+          style={styles.centerMapButtonTop}
+          onPress={async () => {
+            try {
+              const coords = await tripManager.getCurrentLocation();
+              const newRegion = {
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              };
+              setRegion(newRegion);
+              if (mapRef.current && Platform.OS !== 'web') {
+                mapRef.current.animateToRegion(newRegion, 500);
+              }
+            } catch (error) {
+              showNotification('critical', 'Unable to get current location');
+            }
+          }}
+        >
+          <Ionicons name="locate" size={24} color="white" />
+        </TouchableOpacity>
+      ) : isTracking ? (
+        // During trip - Bottom Right
+        <TouchableOpacity
+          style={styles.centerMapButtonBottom}
+          onPress={async () => {
+            try {
+              const coords = await tripManager.getCurrentLocation();
+              const newRegion = {
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              };
+              setRegion(newRegion);
+              if (mapRef.current && Platform.OS !== 'web') {
+                mapRef.current.animateToRegion(newRegion, 500);
+              }
+            } catch (error) {
+              showNotification('critical', 'Unable to get current location');
+            }
+          }}
+        >
+          <Ionicons name="locate" size={24} color="white" />
+        </TouchableOpacity>
+      ) : null}
+
+      {/* Active Car Indicator - Top Left when not tracking, Bottom Left when tracking */}
+      {!isTracking ? (
+        // Clickable only when no trip data (before starting), non-clickable when trip completed
+        route.length === 0 ? (
+          <TouchableOpacity 
+            style={styles.activeCarIndicatorTop}
+            onPress={() => router.push('/mycars')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="car-sport" size={18} color={selectedCarId ? Colors.light.tint : '#EF5350'} />
+            <Text style={[styles.activeCarText, !selectedCarId && styles.activeCarTextWarning]}>
+              {selectedCarName}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="#9BA1A6" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.activeCarIndicatorTop}>
+            <Ionicons name="car-sport" size={18} color={selectedCarId ? Colors.light.tint : '#EF5350'} />
+            <Text style={[styles.activeCarText, !selectedCarId && styles.activeCarTextWarning]}>
+              {selectedCarName}
+            </Text>
+          </View>
+        )
+      ) : (
+        <View style={styles.activeCarIndicatorBottom}>
+          <Ionicons name="car-sport" size={18} color={selectedCarId ? Colors.light.tint : '#EF5350'} />
+          <Text style={[styles.activeCarText, !selectedCarId && styles.activeCarTextWarning]}>
+            {selectedCarName}
+          </Text>
+        </View>
+      )}
+
       {/* Compact Dashboard - During Recording */}
       {isTracking && (
         <View style={styles.compactDashboard}>
@@ -292,16 +403,16 @@ export default function RecordScreen() {
             {/* Stats Column */}
             <View style={styles.compactInfoColumn}>
               <View style={styles.compactStatRow}>
-                <Text style={styles.compactStatLabel}>TEMPO</Text>
+                <Text style={styles.compactStatLabel}>TIME</Text>
                 <Text style={styles.compactStatValue}>{formatDuration(duration)}</Text>
               </View>
               <View style={styles.compactStatRow}>
-                <Text style={styles.compactStatLabel}>DISTÂNCIA</Text>
+                <Text style={styles.compactStatLabel}>DISTANCE</Text>
                 <Text style={styles.compactStatValue}>{distance.toFixed(2)} km</Text>
               </View>
               {aggressiveMarkers.length > 0 && (
                 <View style={styles.compactStatRow}>
-                  <Text style={styles.compactStatLabel}>ALERTAS</Text>
+                  <Text style={styles.compactStatLabel}>ALERTS</Text>
                   <Text style={styles.compactStatWarning}>{aggressiveMarkers.length}</Text>
                 </View>
               )}
@@ -311,7 +422,7 @@ export default function RecordScreen() {
             
             {/* Stop Button */}
             <TouchableOpacity style={styles.compactStopButton} onPress={stopTracking}>
-              <Text style={styles.compactStopIcon}>■</Text>
+              <Ionicons name="stop" size={22} color="white" />
             </TouchableOpacity>
           </View>
         </View>
@@ -322,99 +433,118 @@ export default function RecordScreen() {
         <View style={styles.dashboard}>
           {/* Show stats if trip exists */}
           {route.length > 0 ? (
-            <>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
               {/* Trip Summary */}
               <View style={styles.summaryHeader}>
-                <Text style={styles.summaryTitle}>Viagem Concluída</Text>
+                <Text style={styles.summaryTitle}>Trip Completed</Text>
               </View>
 
               {/* Main Speed Display */}
               <View style={styles.speedCard}>
                 <View style={[styles.speedCircle, styles.speedCircleDark]}>
                   <Text style={styles.speedValue}>{tripManager.getTrip().velocidadeMedia}</Text>
-                  <Text style={styles.speedUnit}>km/h médio</Text>
+                  <Text style={styles.speedUnit}>km/h avg</Text>
                 </View>
               </View>
 
-              {/* Stats Grid */}
-              <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
-                  <Text style={styles.statCardTitle}>DISTÂNCIA</Text>
-                  <Text style={styles.statValue}>{distance.toFixed(2)}</Text>
-                  <Text style={styles.statUnit}>km</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Text style={styles.statCardTitle}>TEMPO</Text>
-                  <Text style={styles.statValue}>{formatDuration(duration)}</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Text style={styles.statCardTitle}>MÁX. VEL.</Text>
-                  <Text style={styles.statValue}>{maxSpeed}</Text>
-                  <Text style={styles.statUnit}>km/h</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Text style={styles.statCardTitle}>ECO SCORE</Text>
-                  <Text style={[styles.statValue, { 
-                    color: getCurrentEcoScore() >= 80 ? '#4CAF50' : getCurrentEcoScore() >= 60 ? '#FF9800' : '#f44336'
-                  }]}>
-                    {getCurrentEcoScore()}
+              {/* Tab Selector */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[styles.tab, activeStatsTab === 'trip' && styles.tabActive]}
+                  onPress={() => setActiveStatsTab('trip')}
+                >
+                  <Text style={[styles.tabText, activeStatsTab === 'trip' && styles.tabTextActive]}>
+                    Trip Stats
                   </Text>
-                  <Text style={styles.statUnit}>/100</Text>
-                </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, activeStatsTab === 'fuel' && styles.tabActive]}
+                  onPress={() => setActiveStatsTab('fuel')}
+                >
+                  <Text style={[styles.tabText, activeStatsTab === 'fuel' && styles.tabTextActive]}>
+                    Fuel Stats
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              {/* Fuel Stats Section */}
-              {fuelStats.fuelConsumed > 0 && (
-                <View style={styles.fuelStatsSection}>
-                  <Text style={styles.fuelStatsTitle}>📊 Estatísticas de Consumo</Text>
-                  
-                  <View style={styles.fuelStatsGrid}>
-                    <View style={styles.fuelStatCard}>
-                      <Text style={styles.fuelStatLabel}>CONSUMO</Text>
-                      <Text style={styles.fuelStatValue}>
-                        {fuelStats.avgConsumption.toFixed(1)}
-                      </Text>
-                      <Text style={styles.fuelStatUnit}>{getConsumptionUnit(fuelType)}</Text>
-                    </View>
-
-                    <View style={styles.fuelStatCard}>
-                      <Text style={styles.fuelStatLabel}>TOTAL USADO</Text>
-                      <Text style={styles.fuelStatValue}>
-                        {fuelStats.fuelConsumed.toFixed(2)}
-                      </Text>
-                      <Text style={styles.fuelStatUnit}>{getFuelUnit(fuelType)}</Text>
-                    </View>
-
-                    <View style={styles.fuelStatCard}>
-                      <Text style={styles.fuelStatLabel}>CUSTO</Text>
-                      <Text style={[styles.fuelStatValue, { color: '#FFB74D' }]}>
-                        {fuelStats.fuelCost.toFixed(2)}
-                      </Text>
-                      <Text style={styles.fuelStatUnit}>€</Text>
-                    </View>
-
-                    {fuelType !== 'electric' && (
-                      <View style={styles.fuelStatCard}>
-                        <Text style={styles.fuelStatLabel}>CO₂</Text>
-                        <Text style={[styles.fuelStatValue, { color: '#EF5350' }]}>
-                          {fuelStats.co2Emissions.toFixed(2)}
-                        </Text>
-                        <Text style={styles.fuelStatUnit}>kg</Text>
-                      </View>
-                    )}
+              {/* Stats Content - Trip Stats Tab */}
+              {activeStatsTab === 'trip' && (
+                <View style={styles.statsGrid}>
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>DISTANCE</Text>
+                    <Text style={styles.statValue}>{distance.toFixed(2)}</Text>
+                    <Text style={styles.statUnit}>km</Text>
                   </View>
+
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>TIME</Text>
+                    <Text style={styles.statValue}>{formatDuration(duration)}</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>MAX SPEED</Text>
+                    <Text style={styles.statValue}>{maxSpeed}</Text>
+                    <Text style={styles.statUnit}>km/h</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>ECO SCORE</Text>
+                    <Text style={[styles.statValue, { 
+                      color: getCurrentEcoScore() >= 80 ? '#4CAF50' : getCurrentEcoScore() >= 60 ? '#FF9800' : '#f44336'
+                    }]}>
+                      {getCurrentEcoScore()}
+                    </Text>
+                    <Text style={styles.statUnit}>/100</Text>
+                  </View>
+
+                  {/* Events Summary */}
+                  {aggressiveMarkers.length > 0 && (
+                    <View style={styles.eventsCardWide}>
+                      <Text style={styles.eventsText}>
+                        {aggressiveMarkers.length} harsh driving event{aggressiveMarkers.length !== 1 ? 's' : ''} detected
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
 
-              {/* Events Summary */}
-              {aggressiveMarkers.length > 0 && (
-                <View style={styles.eventsCard}>
-                  <Text style={styles.eventsText}>
-                    {aggressiveMarkers.length} evento{aggressiveMarkers.length !== 1 ? 's' : ''} de condução brusca detectado{aggressiveMarkers.length !== 1 ? 's' : ''}
-                  </Text>
+              {/* Stats Content - Fuel Stats Tab */}
+              {activeStatsTab === 'fuel' && (
+                <View style={styles.statsGrid}>
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>CONSUMPTION</Text>
+                    <Text style={styles.statValue}>
+                      {fuelStats.avgConsumption.toFixed(2)}
+                    </Text>
+                    <Text style={styles.statUnit}>{getConsumptionUnit(fuelType)}</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>TOTAL USED</Text>
+                    <Text style={styles.statValue}>
+                      {fuelStats.fuelConsumed.toFixed(2)}
+                    </Text>
+                    <Text style={styles.statUnit}>{getFuelUnit(fuelType)}</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>COST</Text>
+                    <Text style={[styles.statValue, { color: '#FFB74D' }]}>
+                      {fuelStats.fuelCost.toFixed(2)}
+                    </Text>
+                    <Text style={styles.statUnit}>EUR</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Text style={styles.statCardTitle}>CO2</Text>
+                    <Text style={[styles.statValue, { color: fuelType === 'electric' ? '#4CAF50' : '#EF5350' }]}>
+                      {fuelStats.co2Emissions.toFixed(2)}
+                    </Text>
+                    <Text style={styles.statUnit}>kg</Text>
+                  </View>
                 </View>
               )}
 
@@ -423,6 +553,9 @@ export default function RecordScreen() {
                 <TouchableOpacity style={styles.saveButton} onPress={async () => {
                   try {
                     const trip = tripManager.getTrip();
+                    // Get logged in user
+                    const user = await getLoggedInUser();
+                    
                     // Add car and fuel data to trip
                     const tripWithFuel = {
                       ...trip,
@@ -433,34 +566,48 @@ export default function RecordScreen() {
                       co2Emissions: fuelStats.co2Emissions,
                       avgConsumption: fuelStats.avgConsumption
                     };
-                    await savetrip(tripWithFuel);
-                    Alert.alert('Sucesso', 'Viagem guardada com sucesso!');
+                    
+                    // Save trip and auto-update goals
+                    await savetrip(tripWithFuel, user?.id);
+                    showNotification('success', 'Trip saved successfully!');
                     resetTrip();
                   } catch (error) {
-                    Alert.alert('Erro', 'Não foi possível guardar a viagem');
+                    showNotification('critical', 'Failed to save trip');
                   }
                 }}>
-                  <Text style={styles.buttonText}>Guardar Viagem</Text>
+                  <Text style={styles.buttonText}>Save Trip</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.resetButton} onPress={resetTrip}>
-                  <Text style={styles.buttonText}>Descartar</Text>
+                  <Text style={styles.buttonText}>Discard</Text>
                 </TouchableOpacity>
               </View>
-            </>
+            </ScrollView>
           ) : (
             <>
               {/* Initial State - No Trip */}
               <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>Pronto para começar?</Text>
+                <Text style={styles.emptyTitle}>Ready to start?</Text>
                 <Text style={styles.emptyText}>
-                  Inicie uma viagem para rastrear o seu percurso e calcular o Eco Score
+                  {selectedCarId 
+                    ? 'Start a trip to track your route and calculate your Eco Score'
+                    : 'Select a car before starting your first trip'}
                 </Text>
               </View>
               
-              <TouchableOpacity style={styles.startButton} onPress={startTracking}>
-                <Text style={styles.buttonText}>Iniciar Viagem</Text>
-              </TouchableOpacity>
+              {selectedCarId ? (
+                <TouchableOpacity style={styles.startButton} onPress={startTracking}>
+                  <Text style={styles.buttonText}>Start Trip</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.goToCarsButton} 
+                  onPress={() => router.push('/mycars')}
+                >
+                  <Ionicons name="car-sport" size={20} color="white" />
+                  <Text style={styles.buttonText}>Go to My Cars</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -476,6 +623,90 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject
+  },
+  // Center Map Button - Top Right (before trip)
+  centerMapButtonTop: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.light.tint,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+    zIndex: 10,
+  },
+  // Center Map Button - Bottom Right (during trip)
+  centerMapButtonBottom: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.light.tint,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+    zIndex: 10,
+  },
+  // Active Car Indicator - Top position when not tracking
+  activeCarIndicatorTop: {
+    position: 'absolute',
+    top: 60,
+    left: 15,
+    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(92, 169, 144, 0.3)',
+  },
+  // Active Car Indicator - Bottom position when tracking
+  activeCarIndicatorBottom: {
+    position: 'absolute',
+    bottom: 20,
+    left: 15,
+    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(92, 169, 144, 0.3)',
+  },
+  activeCarText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ECEDEE',
+  },
+  activeCarTextWarning: {
+    color: '#EF5350',
   },
   // Compact Dashboard (During Recording)
   compactDashboard: {
@@ -561,11 +792,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     marginLeft: 8,
   },
-  compactStopIcon: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: 'bold',
-  },
   // Full Dashboard (Before and After Recording)
   dashboard: {
     position: 'absolute',
@@ -580,9 +806,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 10,
-    maxHeight: '80%',
+    maxHeight: '85%',
     borderWidth: 1,
     borderColor: 'rgba(92, 169, 144, 0.3)',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   summaryHeader: {
     alignItems: 'center',
@@ -686,6 +915,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
+  // Tab Styles
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 15,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: Colors.light.tint,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9BA1A6',
+  },
+  tabTextActive: {
+    color: 'white',
+  },
+  eventsCardWide: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 87, 34, 0.15)',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 5,
+    borderLeftWidth: 3,
+    borderLeftColor: '#f44336',
+  },
   eventsCard: {
     backgroundColor: 'rgba(255, 87, 34, 0.15)',
     borderRadius: 12,
@@ -700,57 +965,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  fuelStatsSection: {
-    backgroundColor: 'rgba(92, 169, 144, 0.1)',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(92, 169, 144, 0.3)',
-  },
-  fuelStatsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ECEDEE',
-    marginBottom: 14,
-    textAlign: 'center',
-  },
-  fuelStatsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  fuelStatCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: 'rgba(44, 44, 46, 0.6)',
-    borderRadius: 10,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(92, 169, 144, 0.2)',
-  },
-  fuelStatLabel: {
-    fontSize: 9,
-    color: '#9BA1A6',
-    fontWeight: '700',
-    marginBottom: 6,
-    letterSpacing: 0.8,
-  },
-  fuelStatValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#5ca990',
-  },
-  fuelStatUnit: {
-    fontSize: 9,
-    color: '#9BA1A6',
-    fontWeight: '500',
-    marginTop: 2,
-  },
   buttonContainer: {
     flexDirection: 'row',
     gap: 10,
+    marginTop: 10,
   },
   startButton: {
     flex: 1,
@@ -759,6 +977,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.light.tint,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  goToCarsButton: {
+    flex: 1,
+    backgroundColor: Colors.light.tint,
+    padding: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     shadowColor: Colors.light.tint,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,

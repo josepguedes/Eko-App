@@ -202,3 +202,120 @@ export async function getGroupStatistics(groupId: string): Promise<{
     totalContributions,
   };
 }
+
+// =====================================================
+// AUTOMATIC GROUP GOAL TRACKING AFTER TRIP
+// =====================================================
+
+/**
+ * Updates all group goals for a user based on trip data
+ * This should be called after saving a trip
+ */
+export async function updateGroupGoalsAfterTrip(
+  userId: string,
+  userGroupIds: string[],
+  trip: {
+    distanciaKm: number;
+    ecoScore: number;
+    velocidadeMedia: number;
+    eventosBruscos: number;
+    co2Emissions?: number;
+  }
+): Promise<void> {
+  try {
+    console.log('🎯 === UPDATE GROUP GOALS START ===');
+    console.log('User ID:', userId);
+    console.log('User Groups:', userGroupIds);
+    console.log('Trip Data:', trip);
+    
+    // Get all goals for user's groups
+    const allGroupGoals = await getUserGroupGoals(userGroupIds);
+    console.log('📊 Total group goals found:', allGroupGoals.length);
+    
+    const activeGoals = allGroupGoals.filter(g => !g.completed);
+    console.log('✅ Active group goals:', activeGoals.length);
+
+    for (const goal of activeGoals) {
+      console.log(`\n🎯 Processing goal: ${goal.taskId} (ID: ${goal.id})`);
+      
+      const task = getGroupTaskById(goal.taskId);
+      if (!task) {
+        console.log('⚠️ Task not found for goal:', goal.taskId);
+        continue;
+      }
+
+      // Get current user contribution
+      const currentUserProgress = goal.memberProgress[userId] || 0;
+      console.log(`Current user progress: ${currentUserProgress}`);
+      
+      let increment = 0;
+
+      switch (goal.taskId) {
+        case 'eco-score-200':
+        case 'eco-score-500':
+          // Add eco score points
+          increment = trip.ecoScore;
+          console.log(`Eco Score increment: ${increment}`);
+          break;
+
+        case 'distance-500':
+        case 'distance-1000':
+          // Add distance in km
+          increment = trip.distanciaKm;
+          console.log(`Distance increment: ${increment} km`);
+          break;
+
+        case 'eco-trips-20':
+          // Count trips with eco score > 70
+          if (trip.ecoScore >= 70) {
+            increment = 1;
+            console.log(`Eco trip counted! Score: ${trip.ecoScore}`);
+          } else {
+            console.log(`Eco trip NOT counted. Score: ${trip.ecoScore} (needs >= 70)`);
+          }
+          break;
+
+        case 'efficient-speed-20':
+          // Count trips with optimal speed (60-80 km/h)
+          if (trip.velocidadeMedia >= 60 && trip.velocidadeMedia <= 80) {
+            increment = 1;
+            console.log(`Efficient speed trip counted! Speed: ${trip.velocidadeMedia}`);
+          } else {
+            console.log(`Efficient speed NOT counted. Speed: ${trip.velocidadeMedia} (needs 60-80)`);
+          }
+          break;
+
+        case 'co2-reduction-100':
+          // Add CO2 saved (if available)
+          if (trip.co2Emissions !== undefined) {
+            // Calculate theoretical CO2 reduction
+            // Assuming baseline is 150g/km and eco-driving reduces it
+            const baselineCO2 = trip.distanciaKm * 0.15; // 150g/km = 0.15kg/km
+            const co2Saved = Math.max(0, baselineCO2 - trip.co2Emissions);
+            increment = co2Saved;
+            console.log(`CO2 reduction: ${increment} kg (baseline: ${baselineCO2}, actual: ${trip.co2Emissions})`);
+          } else {
+            console.log('CO2 emissions not available in trip data');
+          }
+          break;
+
+        default:
+          console.log(`Unknown task ID: ${goal.taskId}`);
+          continue;
+      }
+
+      if (increment > 0) {
+        const newUserProgress = currentUserProgress + increment;
+        console.log(`✅ Updating: ${currentUserProgress} -> ${newUserProgress}`);
+        await updateGroupGoalProgress(goal.id, userId, newUserProgress);
+        console.log(`✅ Group Goal ${goal.taskId} updated for user ${userId}: ${currentUserProgress} -> ${newUserProgress}`);
+      } else {
+        console.log('❌ No increment for this goal');
+      }
+    }
+    
+    console.log('🎯 === UPDATE GROUP GOALS END ===\n');
+  } catch (error) {
+    console.error('❌ Error updating group goals after trip:', error);
+  }
+}

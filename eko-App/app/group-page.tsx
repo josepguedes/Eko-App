@@ -364,6 +364,22 @@ export default function GroupDetails() {
     }
   };
 
+  const handleDeleteMultipleGoals = async (goalIds: string[]) => {
+    try {
+      for (const goalId of goalIds) {
+        await deleteGroupGoal(goalId);
+      }
+      await loadGroupData();
+      showNotification(
+        "success",
+        `Successfully deleted ${goalIds.length} goal(s)`
+      );
+    } catch (error) {
+      console.error("Error deleting multiple goals:", error);
+      showNotification("critical", "Failed to delete some goals");
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!messageText.trim() || !userId || !userName) return;
 
@@ -423,6 +439,7 @@ export default function GroupDetails() {
             group={group}
             onCreateGoal={() => setAddGoalModalVisible(true)}
             onDeleteGoal={handleDeleteGroupGoal}
+            onDeleteMultiple={handleDeleteMultipleGoals}
           />
         );
 

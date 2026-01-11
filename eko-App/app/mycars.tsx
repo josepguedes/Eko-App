@@ -81,6 +81,12 @@ export default function MyCarsScreen() {
         // Create new car
         const newCar = await createCar(userId, model, fuelType);
         await addCarToUser(userId, newCar.id);
+        
+        // Auto-select the first car created
+        if (cars.length === 0) {
+          await setSelectedCar(userId, newCar.id);
+          setSelectedCarId(newCar.id);
+        }
       }
       await loadCars();
     } catch (error) {

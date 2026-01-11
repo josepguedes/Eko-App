@@ -21,8 +21,8 @@ import GoalCard from "@/components/goals/goals-card";
 import BotaoCustom from "@/components/buttons";
 import FloatingAddButton from "@/components/groups/create-group-button";
 import { useNotification } from "@/contexts/NotificationContext";
-import { getUserGroups, getSuggestedGroups, joinGroup, Group, initializeDefaultGroups, deleteUserGroup, getGroupById } from "@/models/groups";
-import { getLoggedInUser, addGroupToUser, initializeDefaultUsers } from "@/models/users";
+import { getUserGroups, getSuggestedGroups, joinGroup, Group, deleteUserGroup, getGroupById } from "@/models/groups";
+import { getLoggedInUser, addGroupToUser } from "@/models/users";
 import { getUserGoals, getTaskById, UserGoal, deleteUserGoal } from "@/models/goals";
 import { getGroupImageSource } from "@/utils/imageHelper";
 import { getUserGroupGoals, GroupGoal, getGroupTaskById } from "@/models/groupGoals";
@@ -47,8 +47,6 @@ export default function Groups() {
 
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [deleteGoalModalVisible, setDeleteGoalModalVisible] = useState(false);
-  const [selectedGoal, setSelectedGoal] = useState<UserGoal | null>(null);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [groupToJoin, setGroupToJoin] = useState<Group | null>(null);
   
@@ -97,10 +95,6 @@ export default function Groups() {
   const loadData = async () => {
     try {
       setLoading(true);
-
-      // Inicializar utilizadores e grupos pré-definidos
-      await initializeDefaultUsers();
-      await initializeDefaultGroups();
 
       const user = await getLoggedInUser();
       if (!user) {
@@ -203,33 +197,7 @@ export default function Groups() {
     }
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
-    const goal = userGoals.find(g => g.id === goalId);
-    if (goal) {
-      setSelectedGoal(goal);
-      setDeleteGoalModalVisible(true);
-    }
-  };
 
-  const confirmDeleteGoal = async () => {
-    if (!selectedGoal) return;
-
-    try {
-      const task = getTaskById(selectedGoal.taskId);
-      await deleteUserGoal(selectedGoal.id);
-      setDeleteGoalModalVisible(false);
-      setSelectedGoal(null);
-      await loadData();
-      showNotification('success', `Successfully deleted goal: ${task?.title || 'Goal'}`);
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-      if (error instanceof Error) {
-        showNotification('critical', error.message);
-      } else {
-        showNotification('critical', 'Failed to delete goal');
-      }
-    }
-  };
 
   const displayedGroups = showAllGroups
     ? allGroups
@@ -427,7 +395,6 @@ export default function Groups() {
                   members={group.members.length}
                   image={getGroupImageSource(group.bannerImage)}
                   onPress={() => handleGroupPress(group.id)}
-                  onLongPress={() => handleLongPressGroup(group)}
                 />
               ))
             )}
@@ -482,7 +449,7 @@ export default function Groups() {
                   >
                     <Ionicons name={selectionMode ? "checkmark-circle" : "checkmark-circle-outline"} size={20} color={selectionMode ? "#fff" : "#5ca990"} />
                     <Text style={[styles.selectionButtonText, selectionMode && styles.selectionButtonTextActive]}>
-                      {selectionMode ? `Selected: ${selectedItems.size}` : 'Select Multiple'}
+                      {selectionMode ? `Selected: ${selectedItems.size}` : 'Delete Goals'}
                     </Text>
                   </Pressable>
                   
@@ -514,21 +481,34 @@ export default function Groups() {
                     return (
                       <Pressable
                         key={goal.id}
-                        onPress={() => selectionMode && toggleItemSelection(goal.id)}
-                        onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
+                        onPress={() => {
+                          if (!selectionMode) {
+                            // Ativar modo de seleção e selecionar este goal
+                            setSelectionMode(true);
+                            setSelectedItems(new Set([goal.id]));
+                          } else {
+                            toggleItemSelection(goal.id);
+                          }
+                        }}
                         style={selectedItems.has(goal.id) && styles.cardWrapperSelected}
-                        disabled={!selectionMode}
                       >
                         <GoalCard
                           title={task.title}
+                          description={task.description}
                           current={goal.current}
                           target={goal.target}
                           unit={task.unit}
                           completed={false}
-                          onLongPress={() => !selectionMode && handleDeleteGoal(goal.id)}
                           selectionMode={selectionMode}
                           isSelected={selectedItems.has(goal.id)}
-                          onPress={() => toggleItemSelection(goal.id)}
+                          onPress={() => {
+                            if (!selectionMode) {
+                              setSelectionMode(true);
+                              setSelectedItems(new Set([goal.id]));
+                            } else {
+                              toggleItemSelection(goal.id);
+                            }
+                          }}
                         />
                       </Pressable>
                     );
@@ -548,11 +528,11 @@ export default function Groups() {
                       <GoalCard
                         key={goal.id}
                         title={task.title}
+                        description={task.description}
                         current={goal.target}
                         target={goal.target}
                         unit={task.unit}
                         completed={true}
-                        onLongPress={() => handleDeleteGoal(goal.id)}
                       />
                     );
                   })}
@@ -586,6 +566,7 @@ export default function Groups() {
                         </View>
                         <GroupGoalCard
                           title={task.title}
+                          description={task.description}
                           current={goal.currentProgress}
                           target={goal.target}
                           unit={task.unit}
@@ -621,6 +602,7 @@ export default function Groups() {
                         </View>
                         <GroupGoalCard
                           title={task.title}
+                          description={task.description}
                           current={goal.currentProgress}
                           target={goal.target}
                           unit={task.unit}
@@ -817,40 +799,6 @@ export default function Groups() {
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Modal para eliminar goal */}
-      <Modal
-        visible={deleteGoalModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setDeleteGoalModalVisible(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setDeleteGoalModalVisible(false)}
-        >
-          <Pressable style={styles.leaveModalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Eliminar Goal</Text>
-            <Text style={styles.modalMessage}>
-              Tem a certeza que deseja eliminar o goal{selectedGoal ? ` "${getTaskById(selectedGoal.taskId)?.title}"` : ''}?
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setDeleteGoalModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.leaveButton]}
-                onPress={confirmDeleteGoal}
-              >
-                <Text style={styles.leaveButtonText}>Eliminar</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
       </GestureHandlerRootView>
     </SafeAreaView>
   );
@@ -867,6 +815,12 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
