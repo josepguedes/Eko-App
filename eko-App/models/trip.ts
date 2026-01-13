@@ -402,3 +402,17 @@ export async function getTripById(tripId: string): Promise<Viagem | null> {
         return null;
     }
 }
+
+export async function getLastTrip(userId: string): Promise<Viagem | null> {
+    try {
+        const trips = await getAllTrips(userId);
+        if (trips.length === 0) return null;
+        
+        // Sort by date and return the most recent
+        trips.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        return trips[0];
+    } catch (error) {
+        console.error('Error getting last trip:', error);
+        return null;
+    }
+}

@@ -1,6 +1,6 @@
 // Stats screen with driving analysis, metrics, and history
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,22 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-
-type TimePeriod = 'Today' | 'Week' | 'Month' | 'Year' | 'All Time';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { 
+  calculateTripStatistics, 
+  getRecentTrips, 
+  getGasSpentHistory,
+  TimePeriod,
+  TripStatistics 
+} from '@/models/tripStats';
+import { getLoggedInUser } from '@/models/users';
+import { getCarById } from '@/models/cars';
+import { Viagem } from '@/models/trip';
+import Dropdown from '@/components/mainPage/dropdown';
 
 interface MetricBarProps {
   label: string;
@@ -40,19 +50,26 @@ function MetricBar({ label, value, maxValue }: MetricBarProps) {
 }
 
 interface HistoryItemProps {
-  date: string;
-  score: string;
+  trip: Viagem;
   onPress: () => void;
 }
 
-function HistoryItem({ date, score, onPress }: HistoryItemProps) {
+function HistoryItem({ trip, onPress }: HistoryItemProps) {
+  const tripDate = new Date(trip.data);
+  const formattedDate = tripDate.toLocaleDateString('en-GB', { 
+    day: '2-digit', 
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
   return (
     <TouchableOpacity style={styles.historyItem} onPress={onPress}>
       <View style={styles.historyIconContainer}>
         <Ionicons name="trophy" size={24} color="#5ca990" />
       </View>
-      <Text style={styles.historyDate}>{date}</Text>
-      <Text style={styles.historyScore}>Score: {score}</Text>
+      <Text style={styles.historyDate}>{formattedDate}</Text>
+      <Text style={styles.historyScore}>Score: {trip.ecoScore}Pts</Text>
       <Ionicons name="chevron-forward" size={20} color="#5ca990" />
     </TouchableOpacity>
   );
@@ -61,83 +78,60 @@ function HistoryItem({ date, score, onPress }: HistoryItemProps) {
 export default function StatsScreen() {
   const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('Today');
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<TripStatistics | null>(null);
+  const [recentTrips, setRecentTrips] = useState<Viagem[]>([]);
+  const [gasChartData, setGasChartData] = useState<number[]>([]);
+  const [userPoints, setUserPoints] = useState(0);
 
   const periods: TimePeriod[] = ['Today', 'Week', 'Month', 'Year', 'All Time'];
 
-  // Mock data - replace with actual data from your backend
-  const statsData = {
-    Today: {
-      overallScore: 4.5,
-      timeSpent: '89:09',
-      distance: 76,
-      gasSaved: 0.8,
-      acceleration: 4,
-      breaking: 3.5,
-      speed: 5,
-      co2Impact: 2,
-      gasSpent: 12.25,
-      gasChange: -3.4,
-    },
-    Week: {
-      overallScore: 4.2,
-      timeSpent: '523:45',
-      distance: 456,
-      gasSaved: 4.2,
-      acceleration: 3.8,
-      breaking: 3.2,
-      speed: 4.5,
-      co2Impact: 2.5,
-      gasSpent: 78.5,
-      gasChange: -2.1,
-    },
-    Month: {
-      overallScore: 4.3,
-      timeSpent: '2145:30',
-      distance: 1823,
-      gasSaved: 18.5,
-      acceleration: 4.1,
-      breaking: 3.4,
-      speed: 4.7,
-      co2Impact: 2.3,
-      gasSpent: 312.75,
-      gasChange: -1.8,
-    },
-    Year: {
-      overallScore: 4.1,
-      timeSpent: '25746:15',
-      distance: 21876,
-      gasSaved: 215.3,
-      acceleration: 3.9,
-      breaking: 3.3,
-      speed: 4.4,
-      co2Impact: 2.4,
-      gasSpent: 3542.5,
-      gasChange: -2.5,
-    },
-    'All Time': {
-      overallScore: 4.0,
-      timeSpent: '51492:30',
-      distance: 43752,
-      gasSaved: 430.6,
-      acceleration: 3.8,
-      breaking: 3.1,
-      speed: 4.3,
-      co2Impact: 2.6,
-      gasSpent: 7085.0,
-      gasChange: -3.0,
-    },
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const user = await getLoggedInUser();
+      
+      if (!user) {
+        console.log('No user logged in');
+        setStats(null);
+        setLoading(false);
+        return;
+      }
+
+      // Calculate statistics for selected period
+      const statistics = await calculateTripStatistics(selectedPeriod, user.id);
+      console.log('Stats loaded:', statistics);
+      setStats(statistics);
+
+      // Get recent trips
+      const trips = await getRecentTrips(3, user.id);
+      setRecentTrips(trips);
+
+      // Get gas spent history
+      const gasHistory = await getGasSpentHistory(30, user.id);
+      setGasChartData(gasHistory.length > 0 ? gasHistory : []);
+
+      // Calculate user points from total eco score
+      const allTimeStats = await calculateTripStatistics('All Time', user.id);
+      setUserPoints(Math.round(allTimeStats.overallScore * allTimeStats.totalTrips * 10));
+
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      // Set default values on error
+      setStats(null);
+      setRecentTrips([]);
+      setGasChartData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const currentStats = statsData[selectedPeriod];
-
-  const historyData = [
-    { date: 'Yesterday, 09:11', score: '2.7Pts' },
-    { date: '07/10, 21:30', score: '2.7Pts' },
-    { date: '05/10, 20:20', score: '2.7Pts' },
-  ];
-
-  // Mock gas chart data
-  const gasChartData = Array(30).fill(0).map(() => Math.random() * 100);
+  // Reload stats when screen is focused or period changes
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [selectedPeriod])
+  );
 
   const getScoreColor = (score: number) => {
     if (score >= 4.5) return '#5ca990';
@@ -146,6 +140,29 @@ export default function StatsScreen() {
     return '#999';
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5ca990" />
+          <Text style={styles.loadingText}>Loading statistics...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="stats-chart" size={64} color="#666" />
+          <Text style={styles.emptyTitle}>No data available</Text>
+          <Text style={styles.emptyText}>Start recording trips to see your statistics</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView
@@ -153,17 +170,11 @@ export default function StatsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Car Header */}
-        <View style={styles.carHeader}>
-          <View style={styles.carImageContainer}>
-            <Image
-              source={require('@/assets/images/car-placeholder.png')}
-              style={styles.carImage}
-              resizeMode="contain"
-            />
-            <View style={styles.pointsBadge}>
-              <Text style={styles.pointsText}>245pts</Text>
-            </View>
+        {/* Connected Car Dropdown */}
+        <View style={styles.carDropdownContainer}>
+          <Dropdown />
+          <View style={styles.pointsBadge}>
+            <Text style={styles.pointsText}>{userPoints}pts</Text>
           </View>
         </View>
 
@@ -203,12 +214,12 @@ export default function StatsScreen() {
               <View 
                 style={[
                   styles.circularScoreProgress,
-                  { backgroundColor: getScoreColor(currentStats.overallScore) }
+                  { backgroundColor: getScoreColor(stats.overallScore) }
                 ]}
               />
               <View style={styles.circularScoreInner}>
                 <Text style={styles.circularScoreText}>
-                  {currentStats.overallScore.toFixed(1)}
+                  {stats.overallScore.toFixed(1)}
                 </Text>
               </View>
             </View>
@@ -217,19 +228,19 @@ export default function StatsScreen() {
           {/* Stats Grid */}
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{currentStats.timeSpent}</Text>
+              <Text style={styles.statValue}>{stats.timeSpent}</Text>
               <Text style={styles.statLabel}>Time Spent</Text>
-              <Text style={styles.statUnit}>Min</Text>
+              <Text style={styles.statUnit}>Hours</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{currentStats.distance}</Text>
+              <Text style={styles.statValue}>{stats.distance}</Text>
               <Text style={styles.statLabel}>Distance</Text>
               <Text style={styles.statUnit}>Km</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{currentStats.gasSaved}</Text>
+              <Text style={styles.statValue}>{stats.gasSaved.toFixed(1)}</Text>
               <Text style={styles.statLabel}>Gas Saved</Text>
               <Text style={styles.statUnit}>L</Text>
             </View>
@@ -238,24 +249,24 @@ export default function StatsScreen() {
           {/* Metrics */}
           <View style={styles.metricsContainer}>
             <MetricBar 
-              label={`Acceleration: ${currentStats.acceleration}`} 
-              value={currentStats.acceleration} 
+              label={`Eco Score: ${stats.overallScore.toFixed(1)}`} 
+              value={stats.overallScore} 
               maxValue={5} 
             />
             <MetricBar 
-              label={`Breaking: ${currentStats.breaking}`} 
-              value={currentStats.breaking} 
-              maxValue={5} 
+              label={`Max Speed: ${stats.maxSpeed.toFixed(0)} km/h`} 
+              value={stats.maxSpeed} 
+              maxValue={120} 
             />
             <MetricBar 
-              label={`Speed: ${currentStats.speed}`} 
-              value={currentStats.speed} 
-              maxValue={5} 
+              label={`Avg Speed: ${stats.avgSpeed.toFixed(0)} km/h`} 
+              value={stats.avgSpeed} 
+              maxValue={100} 
             />
             <MetricBar 
-              label={`CO2 Impact: ${currentStats.co2Impact}`} 
-              value={currentStats.co2Impact} 
-              maxValue={5} 
+              label={`Trips: ${stats.totalTrips}`} 
+              value={stats.totalTrips} 
+              maxValue={Math.max(stats.totalTrips, 10)} 
             />
           </View>
         </View>
@@ -264,17 +275,19 @@ export default function StatsScreen() {
         <View style={styles.gasSection}>
           <Text style={styles.sectionTitle}>Gas Spent</Text>
           <View style={styles.gasAmountContainer}>
-            <Text style={styles.gasAmount}>{currentStats.gasSpent.toFixed(2)}L</Text>
-            <View style={[
-              styles.gasChangeBadge,
-              currentStats.gasChange < 0 ? styles.gasChangePositive : styles.gasChangeNegative
-            ]}>
-              <Text style={styles.gasChangeText}>
-                {currentStats.gasChange > 0 ? '+' : ''}{currentStats.gasChange.toFixed(1)}%
-              </Text>
-            </View>
+            <Text style={styles.gasAmount}>{stats.gasSpent.toFixed(2)}L</Text>
+            {stats.gasChange !== 0 && (
+              <View style={[
+                styles.gasChangeBadge,
+                stats.gasChange < 0 ? styles.gasChangePositive : styles.gasChangeNegative
+              ]}>
+                <Text style={styles.gasChangeText}>
+                  {stats.gasChange > 0 ? '+' : ''}{stats.gasChange.toFixed(1)}%
+                </Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.gasDate}>23/11</Text>
+          <Text style={styles.gasDate}>Last 30 days</Text>
           
           {/* Gas Chart */}
           <View style={styles.gasChart}>
@@ -283,7 +296,7 @@ export default function StatsScreen() {
                 key={index}
                 style={[
                   styles.gasChartBar,
-                  { height: `${value}%` }
+                  { height: `${Math.max(value, 4)}%` }
                 ]}
               />
             ))}
@@ -293,20 +306,37 @@ export default function StatsScreen() {
         {/* History Section */}
         <View style={styles.historySection}>
           <Text style={styles.sectionTitle}>My History</Text>
-          {historyData.map((item, index) => (
-            <HistoryItem
-              key={index}
-              date={item.date}
-              score={item.score}
-              onPress={() => {}}
-            />
-          ))}
-          
-          {/* Check All Button */}
-          <TouchableOpacity style={styles.checkAllButton}>
-            <Text style={styles.checkAllButtonText}>Check All My Rides</Text>
-            <Ionicons name="arrow-forward" size={20} color="#1a1a1a" />
-          </TouchableOpacity>
+          {recentTrips.length > 0 ? (
+            <>
+              {recentTrips.map((trip) => (
+                <HistoryItem
+                  key={trip.id}
+                  trip={trip}
+                  onPress={() => {
+                    // Navigate to trip details if implemented
+                    console.log('View trip:', trip.id);
+                  }}
+                />
+              ))}
+              
+              {/* Check All Button */}
+              <TouchableOpacity 
+                style={styles.checkAllButton}
+                onPress={() => {
+                  // Navigate to all trips view
+                  console.log('View all trips');
+                }}
+              >
+                <Text style={styles.checkAllButtonText}>Check All My Rides</Text>
+                <Ionicons name="arrow-forward" size={20} color="#1a1a1a" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.emptyHistory}>
+              <Ionicons name="car-outline" size={48} color="#666" />
+              <Text style={styles.emptyText}>No trips recorded yet</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -318,49 +348,58 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0e0d',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#999',
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f5f5f5',
+    marginTop: 16,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingBottom: 40,
   },
-  carHeader: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  carImageContainer: {
+  carDropdownContainer: {
     position: 'relative',
-    width: '90%',
-    maxWidth: 350,
-    height: 180,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'visible',
-  },
-  carImage: {
-    width: '100%',
-    height: '100%',
+    marginTop: 16,
+    marginHorizontal: 16,
   },
   pointsBadge: {
     position: 'absolute',
-    top: -10,
-    right: -10,
+    top: -8,
+    right: 8,
     backgroundColor: '#5ca990',
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    zIndex: 10,
   },
   pointsText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
   pageTitle: {
@@ -368,6 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#f5f5f5',
     textAlign: 'center',
+    marginTop: 24,
     marginBottom: 24,
   },
   periodSelector: {
@@ -612,5 +652,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 12,
   },
 });

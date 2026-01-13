@@ -22,13 +22,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // Stats - now calculated from user goals
-  const [stats, setStats] = useState({
-    score: 210,
-    totalGoals: 0,
-    avgScore: 4.2,
-  });
-
   useEffect(() => {
     loadUser();
   }, []);
@@ -45,15 +38,11 @@ export default function ProfileScreen() {
       const loggedUser = await getLoggedInUser();
       setUser(loggedUser);
       
-      // Calculate completed goals
-      if (loggedUser) {
-        const userGoals = await getUserGoals(loggedUser.id);
-        const completedGoalsCount = userGoals.filter(goal => goal.completed).length;
-        
-        setStats(prevStats => ({
-          ...prevStats,
-          totalGoals: completedGoalsCount,
-        }));
+      // Load notification settings
+      const savedSettings = await AsyncStorage.getItem('notificationSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        setNotificationsEnabled(settings.enabled ?? true);
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -107,10 +96,20 @@ export default function ProfileScreen() {
             try {
               await AsyncStorage.clear();
               showNotification('success', 'Storage cleared successfully!');
-              // Redirect to login after clearing
+              
+              // Update user state immediately
+              setUser(null);
+              
+              // Redirect to login after clearing - use a longer delay to ensure notification shows
               setTimeout(() => {
-                router.replace('/login');
-              }, 1500);
+                try {
+                  router.replace('/login');
+                } catch (navError) {
+                  console.error('Navigation error:', navError);
+                  // Force reload the app as fallback
+                  router.replace('/');
+                }
+              }, 2000);
             } catch (error) {
               showNotification('critical', 'Failed to clear storage');
               console.error('Error clearing storage:', error);
@@ -156,12 +155,8 @@ export default function ProfileScreen() {
           onPress={handleUserCardPress}
         />
 
-        {/* Stats Row */}
-        <StatsRow
-          score={stats.score}
-          totalGoals={stats.totalGoals}
-          avgScore={stats.avgScore}
-        />
+        {/* Stats Row - Now loads its own data */}
+        <StatsRow />
 
         {/* Settings Section 1 */}
         <SettingsSection>

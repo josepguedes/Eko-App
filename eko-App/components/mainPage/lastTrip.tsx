@@ -1,19 +1,75 @@
 import * as React from "react";
-import { StyleSheet, View, Text, Pressable } from "react-native";
+import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import BotaoCustom from "../buttons";
-
-
-interface MyLastTripProps {
-    current ?: number;
-}
+import { getLastTrip, Viagem } from "@/models/trip";
+import { getLoggedInUser } from "@/models/users";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function MyLastTrip() {
-    const currentValue = 3.6; // Testado com 5
+    const [lastTrip, setLastTrip] = React.useState<Viagem | null>(null);
+    const [loading, setLoading] = React.useState(true);
+
+    const loadLastTrip = async () => {
+        try {
+            const user = await getLoggedInUser();
+            if (user) {
+                const trip = await getLastTrip(user.id);
+                setLastTrip(trip);
+            }
+        } catch (error) {
+            console.error('Error loading last trip:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadLastTrip();
+    }, []);
+
+    // Reload when screen comes into focus
+    useFocusEffect(
+        React.useCallback(() => {
+            loadLastTrip();
+        }, [])
+    );
+
+    if (loading) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.card}>
+                    <ActivityIndicator size="large" color="#5ca990" />
+                </View>
+            </View>
+        );
+    }
+
+    if (!lastTrip) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.card}>
+                    <View style={styles.header}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="car" size={20} color="#BAFFED" />
+                        </View>
+                        <Text style={styles.title}>My Last Trip</Text>
+                    </View>
+                    <View style={styles.emptyState}>
+                        <Ionicons name="car-outline" size={48} color="#666" />
+                        <Text style={styles.emptyText}>No trips recorded yet</Text>
+                        <Text style={styles.emptySubtext}>Start a trip to see your statistics</Text>
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    const currentValue = lastTrip.ecoScore;
     const maxValue = 5;
     const progressPercentage = Math.min(100, (currentValue / maxValue) * 100);
 
-    // Lógica de rotação para cada metade
+    // Rotation logic for each half
     const rightRotation = progressPercentage <= 50
         ? (progressPercentage / 50) * 180
         : 180;
@@ -21,6 +77,15 @@ export default function MyLastTrip() {
     const leftRotation = progressPercentage > 50
         ? ((progressPercentage - 50) / 50) * 180
         : 0;
+
+    // Calculate fuel consumption and savings (mock calculation)
+    const fuelConsumed = (lastTrip.distanciaKm * 0.065).toFixed(1); // ~6.5L/100km average
+    const fuelSaved = (lastTrip.distanciaKm * 0.01 * (lastTrip.ecoScore / 5)).toFixed(1);
+    
+    // Format duration
+    const hours = Math.floor(lastTrip.duration / 3600);
+    const minutes = Math.floor((lastTrip.duration % 3600) / 60);
+    const durationText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
 
     return (
         <View style={styles.container}>
@@ -75,7 +140,7 @@ export default function MyLastTrip() {
                     <View style={styles.innerCircle} />
 
                     {/* Center Value */}
-                    <Text style={styles.centerText}>{currentValue.toFixed(1).replace('.', ',')}</Text>
+                    <Text style={styles.centerText}>{currentValue.toFixed(1)}</Text>
 
                     {/* Divider Lines */}
                     <View style={styles.horizontalLineLeft} />
@@ -84,20 +149,18 @@ export default function MyLastTrip() {
                     <View style={styles.verticalLineBottom} />
 
                     {/* Stats Labels */}
-                    <Text style={styles.statTopLeft}>Gas Spent{'\n'}10.2L</Text>
-                    <Text style={styles.statTopRight}>Lasted{'\n'}12 minutes</Text>
-                    <Text style={styles.statBottomLeft}>Saved 0.2L{'\n'}of gas</Text>
-                    <Text style={styles.statBottomRight}>Drove{'\n'}2.1Km</Text>
+                    <Text style={styles.statTopLeft}>Gas Spent{'\n'}{fuelConsumed}L</Text>
+                    <Text style={styles.statTopRight}>Lasted{'\n'}{durationText}</Text>
+                    <Text style={styles.statBottomLeft}>Saved {fuelSaved}L{'\n'}of gas</Text>
+                    <Text style={styles.statBottomRight}>Drove{'\n'}{lastTrip.distanciaKm.toFixed(1)}Km</Text>
                 </View>
 
                 {/* Button */}
-                
-                    <BotaoCustom
-                        titulo="View Trip Details"
-                        navegarPara="/tripDetails"
-                        style={styles.button}
-                    />
-
+                <BotaoCustom
+                    titulo="View Trip Details"
+                    navegarPara="/stats"
+                    style={styles.button}
+                />
             </View>
         </View>
     );
@@ -171,7 +234,7 @@ const styles = StyleSheet.create({
         width: 128,
         height: 128,
         borderRadius: 64,
-        backgroundColor: "#2A3A35", // Cor igual ao fundo do card
+        backgroundColor: "#2A3A35",
     },
     centerText: {
         position: "absolute",
@@ -179,7 +242,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#F5F5F5",
     },
-    // Linhas e Stats
     horizontalLineLeft: {
         position: "absolute",
         left: 20,
@@ -250,11 +312,26 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
         maxWidth: 80,
     },
-
     button: {
         alignSelf: "center",
         marginTop: 8,
         width: "80%",
         height: 60,
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 48,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#f5f5f5',
+        marginTop: 16,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: '#999',
+        marginTop: 8,
     },
 });
