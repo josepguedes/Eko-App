@@ -6,6 +6,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import GlobalNotification from '@/components/global-notification';
+import { initializeMockData } from '@/models/mockData';
+import { useEffect } from 'react';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -13,6 +15,18 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        await initializeMockData();
+      } catch (error) {
+        console.error('Error initializing app:', error);
+      }
+    };
+
+    initializeApp();
+  }, []);
 
   return (
     <NotificationProvider>
