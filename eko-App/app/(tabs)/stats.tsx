@@ -24,6 +24,7 @@ import { getLoggedInUser } from '@/models/users';
 import { getCarById } from '@/models/cars';
 import { Viagem } from '@/models/trip';
 import Dropdown from '@/components/mainPage/dropdown';
+import { css } from 'react-native-reanimated/lib/typescript/css/stylesheet';
 
 interface MetricBarProps {
   label: string;
@@ -214,7 +215,10 @@ export default function StatsScreen() {
               <View 
                 style={[
                   styles.circularScoreProgress,
-                  { backgroundColor: getScoreColor(stats.overallScore) }
+                  { 
+                    backgroundColor: getScoreColor(stats.overallScore),
+                    borderColor: getScoreColor(stats.overallScore)
+                  }
                 ]}
               />
               <View style={styles.circularScoreInner}>
@@ -474,7 +478,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     borderWidth: 12,
-    borderColor: '#5ca990',
+    borderColor: 'rgb(153, 153, 153)',
     borderTopColor: 'transparent',
     borderRightColor: 'transparent',
     transform: [{ rotate: '135deg' }],

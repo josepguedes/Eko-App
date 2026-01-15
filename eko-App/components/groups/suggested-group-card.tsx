@@ -36,9 +36,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginRight: 16,
-    backgroundColor: 'rgba(26, 26, 26, 0.5)',
-    borderWidth: 1,
-    borderColor: '#fff',
+    backgroundColor: 'rgba(26, 26, 26, 0.85)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(214, 214, 214, 0.2)',
   },
   suggestedImage: {
     width: '100%',
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   suggestedName: {
-    color: '#fff',
+    color: '#f5f5f5',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
@@ -65,18 +65,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   membersText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#999',
+    fontSize: 14,
   },
   joinButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 6,
+    backgroundColor: '#5ca990',
+    paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 12,
   },
   joinButtonText: {
-    color: '#0a0e0d',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

@@ -169,13 +169,6 @@ export default function ProfileScreen() {
             showDivider
           />
           <SettingsItem
-            icon="speedometer-outline"
-            label="Units"
-            type="navigation"
-            onPress={handleUnits}
-            showDivider
-          />
-          <SettingsItem
             icon="car-outline"
             label="My Cars"
             type="navigation"

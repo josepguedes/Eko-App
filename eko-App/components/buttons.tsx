@@ -55,31 +55,31 @@ export default function BotaoCustom({
 
 const styles = StyleSheet.create({
     botaoBase: {
-        width: 150,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
+        width: '100%',
+        paddingVertical: 16,
+        paddingHorizontal: 24,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        marginVertical: 8,
+        marginVertical: 4,
     },
     primario: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#5ca990',
     },
     secundario: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#FFFFFF',
+        borderColor: '#5ca990',
     },
     textoBase: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
     },
     textoPrimario: {
-        color: '#000000',
+        color: '#FFFFFF',
     },
     textoSecundario: {
-        color: '#FFFFFF',
+        color: '#5ca990',
     },
     disabled: {
         opacity: 0.5,
