@@ -70,12 +70,12 @@ export default function GoalCard({ title, description, current, target, unit = '
 
 const styles = StyleSheet.create({
   goalCard: {
-    backgroundColor: 'rgba(26, 26, 26, 0.5)',
+    backgroundColor: 'rgba(26, 26, 26, 0.85)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(214, 214, 214, 0.2)',
   },
   completedGoalCard: {
     opacity: 0.7,
@@ -90,13 +90,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   goalTitle: {
-    color: '#fff',
+    color: '#f5f5f5',
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
   },
   goalDescription: {
-    color: '#9BA1A6',
+    color: '#999',
     fontSize: 13,
     marginBottom: 12,
     marginTop: -6,
@@ -108,14 +108,14 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     flex: 3,
-    height: 14,
-    backgroundColor: '#3a3a3a',
-    borderRadius: 7,
+    height: 12,
+    backgroundColor: 'rgba(214, 214, 214, 0.2)',
+    borderRadius: 6,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 7,
+    borderRadius: 6,
     backgroundColor: '#5ca990',
   },
   progressText: {

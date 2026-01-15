@@ -23,24 +23,24 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: 8,
   },
   caixa: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#5ca990',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
   caixaSelecionada: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#5ca990',
   },
   label: {
     marginLeft: 10,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#f5f5f5',
   },
 });

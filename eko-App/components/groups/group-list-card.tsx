@@ -51,12 +51,12 @@ const styles = StyleSheet.create({
   groupCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.5)',
+    backgroundColor: 'rgba(26, 26, 26, 0.85)',
     borderRadius: 16,
-    padding: 12,
+    padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(214, 214, 214, 0.2)',
   },
   groupCardSelected: {
     borderColor: '#5ca990',
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   groupName: {
-    color: '#fff',
+    color: '#f5f5f5',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -85,10 +85,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginTop: 4,
   },
   membersText: {
-    color: '#fff',
+    color: '#999',
     fontSize: 14,
-    marginTop: 16,
   },
 });

@@ -27,7 +27,7 @@ export default function InputCustom({
                     <TextInput 
                         style={styles.textInput}
                         placeholder={placeHolder}
-                        placeholderTextColor="#999"
+                        placeholderTextColor="#666"
                         value={value}
                         onChangeText={onChangeText}
                         secureTextEntry={secureTextEntry}
@@ -43,15 +43,15 @@ const styles = StyleSheet.create({
         marginVertical: 8,
     },
     inputContainer: {
-        width: 258,
-        height: 48, // Altura ligeiramente maior para conforto visual
+        width: '100%',
+        height: 52,
         borderStyle: "solid",
-        borderColor: "#d6d6d6",
+        borderColor: "rgba(214, 214, 214, 0.3)",
         borderWidth: 1,
-        borderRadius: 8, // Arredondar os cantos fica mais moderno
-        paddingHorizontal: 13,
+        borderRadius: 12,
+        paddingHorizontal: 16,
         justifyContent: "center",
-        backgroundColor: "#fff" // Garante que o fundo não seja transparente
+        backgroundColor: "rgba(255, 255, 255, 0.05)"
     },
     leftSection: {
         flexDirection: "row",
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     textInput: {
         flex: 1,
         fontSize: 16,
-        fontFamily: "DMSans-Regular", // Certifica-te que a fonte está instalada
-        color: "#333", // Cor do texto que o user escreve
+        fontFamily: "DMSans-Regular",
+        color: "#f5f5f5",
     }
 });
