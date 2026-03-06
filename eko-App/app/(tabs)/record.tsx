@@ -82,12 +82,12 @@ export default function RecordScreen() {
         // Update UI with new data - ensure speed is never negative
         const validSpeed = Math.max(0, Math.round(speed));
         setVelocidade(validSpeed);
-        
+
         // Track max speed
         if (validSpeed > maxSpeed) {
           setMaxSpeed(validSpeed);
         }
-        
+
         // Animar a velocidade de forma fluida
         Animated.spring(velocidadeAnimada, {
           toValue: validSpeed,
@@ -151,7 +151,7 @@ export default function RecordScreen() {
     setDuration(0);
     velocidadeAnimada.setValue(0);
     setFuelStats({ fuelConsumed: 0, avgConsumption: 0, fuelCost: 0, co2Emissions: 0 });
-    
+
     if (durationInterval.current) {
       clearInterval(durationInterval.current);
       durationInterval.current = null;
@@ -358,7 +358,7 @@ export default function RecordScreen() {
       {!isTracking ? (
         // Clickable only when no trip data (before starting), non-clickable when trip completed
         route.length === 0 ? (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.activeCarIndicatorTop}
             onPress={() => router.push('/mycars')}
             activeOpacity={0.7}
@@ -397,9 +397,9 @@ export default function RecordScreen() {
               </Animated.Text>
               <Text style={styles.compactSpeedUnit}>km/h</Text>
             </View>
-            
+
             <View style={styles.compactDivider} />
-            
+
             {/* Stats Column */}
             <View style={styles.compactInfoColumn}>
               <View style={styles.compactStatRow}>
@@ -417,9 +417,9 @@ export default function RecordScreen() {
                 </View>
               )}
             </View>
-            
+
             <View style={styles.compactDivider} />
-            
+
             {/* Stop Button */}
             <TouchableOpacity style={styles.compactStopButton} onPress={stopTracking}>
               <Ionicons name="stop" size={22} color="white" />
@@ -433,7 +433,7 @@ export default function RecordScreen() {
         <View style={styles.dashboard}>
           {/* Show stats if trip exists */}
           {route.length > 0 ? (
-            <ScrollView 
+            <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
@@ -492,7 +492,7 @@ export default function RecordScreen() {
 
                   <View style={styles.statCard}>
                     <Text style={styles.statCardTitle}>ECO SCORE</Text>
-                    <Text style={[styles.statValue, { 
+                    <Text style={[styles.statValue, {
                       color: getCurrentEcoScore() >= 80 ? '#4CAF50' : getCurrentEcoScore() >= 60 ? '#FF9800' : '#f44336'
                     }]}>
                       {getCurrentEcoScore()}
@@ -555,7 +555,7 @@ export default function RecordScreen() {
                     const trip = tripManager.getTrip();
                     // Get logged in user
                     const user = await getLoggedInUser();
-                    
+
                     // Add car and fuel data to trip
                     const tripWithFuel = {
                       ...trip,
@@ -566,7 +566,7 @@ export default function RecordScreen() {
                       co2Emissions: fuelStats.co2Emissions,
                       avgConsumption: fuelStats.avgConsumption
                     };
-                    
+
                     // Save trip and auto-update goals
                     await savetrip(tripWithFuel, user?.id);
                     showNotification('success', 'Trip saved successfully!');
@@ -577,7 +577,7 @@ export default function RecordScreen() {
                 }}>
                   <Text style={styles.buttonText}>Save Trip</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity style={styles.resetButton} onPress={resetTrip}>
                   <Text style={styles.buttonText}>Discard</Text>
                 </TouchableOpacity>
@@ -589,19 +589,19 @@ export default function RecordScreen() {
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>Ready to start?</Text>
                 <Text style={styles.emptyText}>
-                  {selectedCarId 
+                  {selectedCarId
                     ? 'Start a trip to track your route and calculate your Eco Score'
                     : 'Select a car before starting your first trip'}
                 </Text>
               </View>
-              
+
               {selectedCarId ? (
                 <TouchableOpacity style={styles.startButton} onPress={startTracking}>
                   <Text style={styles.buttonText}>Start Trip</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity 
-                  style={styles.goToCarsButton} 
+                <TouchableOpacity
+                  style={styles.goToCarsButton}
                   onPress={() => router.push('/mycars')}
                 >
                   <Ionicons name="car-sport" size={20} color="white" />

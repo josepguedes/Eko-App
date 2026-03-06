@@ -395,6 +395,7 @@ export default function Groups() {
                   members={group.members.length}
                   image={getGroupImageSource(group.bannerImage)}
                   onPress={() => handleGroupPress(group.id)}
+                  onLongPress={() => handleLongPressGroup(group)}
                 />
               ))
             )}
