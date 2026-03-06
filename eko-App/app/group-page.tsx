@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import {View,Text,StyleSheet,Image,TouchableOpacity,ScrollView,ActivityIndicator,Modal,Pressable,TextInput,
+import {
+  View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, TextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNotification } from "@/contexts/NotificationContext";
-import {getGroupById,Group,deleteUserGroup,deleteGroup,saveGroup,} from "@/models/groups";
-import {getLoggedInUser,removeGroupFromUser,getAllUsers,User,} from "@/models/users";
+import { getGroupById, Group, deleteUserGroup, deleteGroup, saveGroup, } from "@/models/groups";
+import { getLoggedInUser, removeGroupFromUser, getAllUsers, User, } from "@/models/users";
 import SegmentedControls from "@/components/groups/segmented-controls";
 import { getGroupImageSource } from "@/utils/imageHelper";
 import CustomTabBar from "@/components/custom-tab-bar";
-import {getGroupGoals,createGroupGoal,updateGroupGoalProgress,deleteGroupGoal,GroupGoal,getGroupStatistics,} from "@/models/groupGoals";
-import {getGroupMessages, sendMessage,Message,deleteGroupMessages,} from "@/models/messages";
+import { getGroupGoals, createGroupGoal, updateGroupGoalProgress, deleteGroupGoal, GroupGoal, getGroupStatistics, } from "@/models/groupGoals";
+import { getGroupMessages, sendMessage, Message, deleteGroupMessages, } from "@/models/messages";
 import { PREDEFINED_TASKS, getTaskById } from "@/models/goals";
 import GroupGoalCard from "@/components/groups/group-goal-card";
 import GroupChatTab from "@/components/groups/GroupChatTab";
@@ -703,14 +704,6 @@ export default function GroupDetails() {
                   </View>
                 ))}
             </ScrollView>
-            <View style={styles.modalButtonContainer}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setMembersModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Close</Text>
-              </Pressable>
-            </View>
           </Pressable>
         </Pressable>
       </Modal>
